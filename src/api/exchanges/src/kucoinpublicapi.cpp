@@ -17,9 +17,9 @@
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -36,7 +36,7 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "request-retry.hpp"
 #include "stringconv.hpp"
@@ -48,8 +48,8 @@ namespace cct::api {
 namespace {
 
 template <class T>
-T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
-  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, curlPostData));
+T PublicQuery(HttpClient& httpClient, std::string_view endpoint, const HttpPostData& httpPostData = HttpPostData()) {
+  RequestRetry requestRetry(httpClient, HttpRequestOptions(HttpRequestType::kGet, httpPostData));
 
   return requestRetry.query<T>(endpoint, [](const T& response) {
     if constexpr (amc::is_detected<schema::kucoin::has_code_t, T>::value) {
@@ -66,34 +66,34 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostD
 
 KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::kucoin, fiatConverter, commonAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
-          _curlHandle, _coincenterInfo, commonAPI),
+          _httpClient, _coincenterInfo, commonAPI),
       _marketsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
-          _curlHandle, exchangeConfig().asset),
+          _httpClient, exchangeConfig().asset),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
-          _marketsCache, _curlHandle),
+          _marketsCache, _httpClient),
       _orderbookCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
-          _curlHandle),
+          _httpClient),
       _tradedVolumeCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
-          _curlHandle),
+          _httpClient),
       _tickerCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice), _cachedResultVault),
-          _curlHandle) {}
+          _httpClient) {}
 
 bool KucoinPublic::healthCheck() {
-  auto result = PublicQuery<schema::kucoin::V1Status>(_curlHandle, "/api/v1/status");
+  auto result = PublicQuery<schema::kucoin::V1Status>(_httpClient, "/api/v1/status");
   log::info("{} status: {}, msg: {}", name(), result.data.status, result.data.msg);
   return result.data.status == "open";
 }
 
 KucoinPublic::TradableCurrenciesFunc::CurrencyInfoSet KucoinPublic::TradableCurrenciesFunc::operator()() {
-  const auto result = PublicQuery<schema::kucoin::V3Currencies>(_curlHandle, "/api/v3/currencies");
+  const auto result = PublicQuery<schema::kucoin::V3Currencies>(_httpClient, "/api/v3/currencies");
   vector<CurrencyInfo> currencyInfos;
   currencyInfos.reserve(static_cast<uint32_t>(result.data.size()));
   for (const auto& curDetail : result.data) {
@@ -159,7 +159,7 @@ CurrencyExchangeFlatSet KucoinPublic::queryTradableCurrencies() {
 }
 
 std::pair<MarketSet, KucoinPublic::MarketsFunc::MarketInfoMap> KucoinPublic::MarketsFunc::operator()() {
-  auto result = PublicQuery<schema::kucoin::V2Symbols>(_curlHandle, "/api/v2/symbols");
+  auto result = PublicQuery<schema::kucoin::V2Symbols>(_httpClient, "/api/v2/symbols");
 
   MarketSet markets;
   MarketInfoMap marketInfoMap;
@@ -231,7 +231,7 @@ std::optional<MonetaryAmount> KucoinPublic::queryWithdrawalFee(CurrencyCode curr
 MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const auto& [markets, marketInfoMap] = _marketsCache.get();
-  const auto data = PublicQuery<schema::kucoin::V1AllTickers>(_curlHandle, "/api/v1/market/allTickers");
+  const auto data = PublicQuery<schema::kucoin::V1AllTickers>(_httpClient, "/api/v1/market/allTickers");
   const auto time = Clock::now();
   for (const auto& ticker : data.data.ticker) {
     if (ticker.symbol.size() > Market::kMaxLen) {
@@ -295,7 +295,7 @@ MarketOrderBook KucoinPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
   MarketOrderBookLines orderBookLines;
 
-  const auto asksAndBids = PublicQuery<schema::kucoin::V1PartOrderBook>(_curlHandle, endpoint, GetSymbolPostData(mk));
+  const auto asksAndBids = PublicQuery<schema::kucoin::V1PartOrderBook>(_httpClient, endpoint, GetSymbolPostData(mk));
   const auto nowTime = Clock::now();
 
   if (asksAndBids.data.asks.size() == asksAndBids.data.bids.size()) {
@@ -359,7 +359,7 @@ MonetaryAmount KucoinPublic::sanitizeVolume(Market mk, MonetaryAmount vol) {
 
 MonetaryAmount KucoinPublic::TradedVolumeFunc::operator()(Market mk) {
   const auto result =
-      PublicQuery<schema::kucoin::V1MarketStats>(_curlHandle, "/api/v1/market/stats", GetSymbolPostData(mk));
+      PublicQuery<schema::kucoin::V1MarketStats>(_httpClient, "/api/v1/market/stats", GetSymbolPostData(mk));
   return {result.data.vol, mk.base()};
 }
 
@@ -370,7 +370,7 @@ PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
   }
 
   auto result =
-      PublicQuery<schema::kucoin::V1MarketHistories>(_curlHandle, "/api/v1/market/histories", GetSymbolPostData(mk));
+      PublicQuery<schema::kucoin::V1MarketHistories>(_httpClient, "/api/v1/market/histories", GetSymbolPostData(mk));
 
   PublicTradeVector ret;
   ret.reserve(std::min(static_cast<PublicTradeVector::size_type>(result.data.size()),
@@ -392,7 +392,7 @@ PublicTradeVector KucoinPublic::queryLastTrades(Market mk, int nbTrades) {
 
 MonetaryAmount KucoinPublic::TickerFunc::operator()(Market mk) {
   const auto result = PublicQuery<schema::kucoin::V1MarketOrderbookLevel1>(
-      _curlHandle, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
+      _httpClient, "/api/v1/market/orderbook/level1", GetSymbolPostData(mk));
   return {result.data.price, mk.quote()};
 }
 }  // namespace cct::api

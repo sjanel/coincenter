@@ -2,7 +2,8 @@
   "dependencies": [
     "openssl",
     "zlib",
-    "curl",
+    "zstd",
+    "brotli",
     {
       "name": "protobuf",
       "features": [

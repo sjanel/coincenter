@@ -30,9 +30,9 @@
 #include "cct_string.hpp"
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
@@ -51,7 +51,7 @@
 #include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "read-json.hpp"
 #include "recentdeposit.hpp"
 #include "ssl_sha.hpp"
@@ -105,7 +105,7 @@ enum class QueryDelayDir : int8_t {
   kBehind,
 };
 
-void SetNonceAndSignature(const APIKey& apiKey, CurlPostData& postData, Duration queryDelay) {
+void SetNonceAndSignature(const APIKey& apiKey, HttpPostData& postData, Duration queryDelay) {
   Nonce nonce = Nonce_TimeSinceEpochInMs(queryDelay);
   postData.set("timestamp", nonce);
 
@@ -185,13 +185,13 @@ bool CheckErrorDoRetry(int statusCode, const T& ret, QueryDelayDir& queryDelayDi
   return false;
 }
 
-template <class T, class CurlPostDataT = CurlPostData>
-T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-               Duration& queryDelay, CurlPostDataT&& curlPostData = CurlPostData(), bool throwIfError = true) {
-  CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
+template <class T, class HttpPostDataT = HttpPostData>
+T PrivateQuery(HttpClient& httpClient, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
+               Duration& queryDelay, HttpPostDataT&& httpPostData = HttpPostData(), bool throwIfError = true) {
+  HttpRequestOptions opts(requestType, std::forward<HttpPostDataT>(httpPostData));
   opts.mutableHttpHeaders().emplace_back("X-MBX-APIKEY", apiKey.key());
 
-  Duration sleepingTime = curlHandle.minDurationBetweenQueries();
+  Duration sleepingTime = httpClient.minDurationBetweenQueries();
   int statusCode{};
   QueryDelayDir queryDelayDir = QueryDelayDir::kNoDir;
   T ret;
@@ -204,7 +204,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
 
     SetNonceAndSignature(apiKey, opts.mutablePostData(), queryDelay);
 
-    auto resStr = curlHandle.query(endpoint, opts);
+    auto resStr = httpClient.query(endpoint, opts);
     // NOLINTNEXTLINE(readability-implicit-bool-conversion)
 
     // reset msg & code to nullopt before new call, otherwise it keeps the previous one
@@ -215,7 +215,7 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
       ret.code = std::nullopt;
     }
 
-    auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
+    auto ec = ReadJson<json::opts_ex{{.error_on_unknown_keys = false, .minified = true}, /*raw_string*/ true}>(
         resStr, "binance private", ret);
     if (ec) {
       statusCode = -1;
@@ -258,31 +258,31 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
 
 BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePublic& binancePublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, binancePublic, apiKey),
-      _curlHandle(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+      _httpClient(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
-          _curlHandle, _apiKey, binancePublic, _queryDelay),
+          _httpClient, _apiKey, binancePublic, _queryDelay),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
-          _curlHandle, _apiKey, binancePublic, _queryDelay),
+          _httpClient, _apiKey, binancePublic, _queryDelay),
       _allWithdrawFeesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
-          _curlHandle, _apiKey, binancePublic, _queryDelay),
+          _httpClient, _apiKey, binancePublic, _queryDelay),
       _withdrawFeesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
-          _curlHandle, _apiKey, binancePublic, _queryDelay) {}
+          _httpClient, _apiKey, binancePublic, _queryDelay) {}
 
 CurrencyExchangeFlatSet BinancePrivate::TradableCurrenciesCache::operator()() {
-  auto allCoins = PrivateQuery<schema::binance::NetworkCoinDataVector>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  auto allCoins = PrivateQuery<schema::binance::NetworkCoinDataVector>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                                        "/sapi/v1/capital/config/getall", _queryDelay);
   return BinanceGlobalInfos::ExtractTradableCurrencies(allCoins, _exchangePublic.exchangeConfig().asset.allExclude);
 }
 
 bool BinancePrivate::validateApiKey() {
   static constexpr bool throwIfError = false;
-  auto result = PrivateQuery<schema::binance::V1AccountStatus>(_curlHandle, _apiKey, HttpRequestType::kGet,
-                                                               "/sapi/v1/account/status", _queryDelay, CurlPostData(),
+  auto result = PrivateQuery<schema::binance::V1AccountStatus>(_httpClient, _apiKey, HttpRequestType::kGet,
+                                                               "/sapi/v1/account/status", _queryDelay, HttpPostData(),
                                                                throwIfError);
   static constexpr std::string_view kNormalStatus = "Normal";
   return result.data == kNormalStatus;
@@ -290,8 +290,8 @@ bool BinancePrivate::validateApiKey() {
 
 BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   const auto v3AccountBalance =
-      PrivateQuery<schema::binance::V3AccountBalance>(_curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/account",
-                                                      _queryDelay, CurlPostData{{"omitZeroBalances", "true"}});
+      PrivateQuery<schema::binance::V3AccountBalance>(_httpClient, _apiKey, HttpRequestType::kGet, "/api/v3/account",
+                                                      _queryDelay, HttpPostData{{"omitZeroBalances", "true"}});
   const bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
 
@@ -319,7 +319,7 @@ BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balan
 Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   // Limitation : we do not provide network here, we use default in accordance of getTradableCurrenciesService
   auto result = PrivateQuery<schema::binance::V1CapitalDepositAddressListElement>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/address", _queryDelay,
+      _httpClient, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/address", _queryDelay,
       {{"coin", currencyCode.str()}});
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   const bool doCheckWallet =
@@ -332,7 +332,7 @@ Wallet BinancePrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) 
   return wallet;
 }
 
-bool BinancePrivate::checkMarketAppendSymbol(Market mk, CurlPostData& params) {
+bool BinancePrivate::checkMarketAppendSymbol(Market mk, HttpPostData& params) {
   const auto optMarket = _exchangePublic.retrieveMarket(mk.base(), mk.quote());
   if (!optMarket) {
     return false;
@@ -406,7 +406,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, std::span<const sche
 
 ClosedOrderVector BinancePrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
   ClosedOrderVector closedOrders;
-  CurlPostData params;
+  HttpPostData params;
   if (closedOrdersConstraints.isMarketDefined()) {
     if (!checkMarketAppendSymbol(closedOrdersConstraints.market(), params)) {
       return closedOrders;
@@ -418,7 +418,7 @@ ClosedOrderVector BinancePrivate::queryClosedOrders(const OrdersConstraints& clo
       params.emplace_back("endTime", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
     }
     const auto result = PrivateQuery<schema::binance::V3GetAllOrders>(
-        _curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/allOrders", _queryDelay, std::move(params));
+        _httpClient, _apiKey, HttpRequestType::kGet, "/api/v3/allOrders", _queryDelay, std::move(params));
 
     FillOrders(closedOrdersConstraints, result, _exchangePublic, closedOrders);
     log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
@@ -432,7 +432,7 @@ ClosedOrderVector BinancePrivate::queryClosedOrders(const OrdersConstraints& clo
 
 OpenedOrderVector BinancePrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   OpenedOrderVector openedOrders;
-  CurlPostData params;
+  HttpPostData params;
   if (openedOrdersConstraints.isMarketDefined()) {
     // Symbol (which corresponds to a market) is optional - however, it costs 40 credits if omitted and should exist
     if (!checkMarketAppendSymbol(openedOrdersConstraints.market(), params)) {
@@ -440,7 +440,7 @@ OpenedOrderVector BinancePrivate::queryOpenedOrders(const OrdersConstraints& ope
     }
   }
   const auto result = PrivateQuery<schema::binance::V3GetAllOrders>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/openOrders", _queryDelay, std::move(params));
+      _httpClient, _apiKey, HttpRequestType::kGet, "/api/v3/openOrders", _queryDelay, std::move(params));
 
   FillOrders(openedOrdersConstraints, result, _exchangePublic, openedOrders);
 
@@ -449,7 +449,7 @@ OpenedOrderVector BinancePrivate::queryOpenedOrders(const OrdersConstraints& ope
 }
 
 int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
-  CurlPostData params;
+  HttpPostData params;
   bool isMarketDefined = openedOrdersConstraints.isMarketDefined();
   bool canUseCancelAllEndpoint = openedOrdersConstraints.isAtMostMarketDependent();
   if (isMarketDefined) {
@@ -458,7 +458,7 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
     }
     if (canUseCancelAllEndpoint) {
       const auto cancelledOrders = PrivateQuery<schema::binance::V3CancelAllOrders>(
-          _curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, std::move(params));
+          _httpClient, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, std::move(params));
       return static_cast<int>(cancelledOrders.size());
     }
   }
@@ -480,13 +480,13 @@ int BinancePrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
     if (orders.size() > 1 && canUseCancelAllEndpoint) {
       params.erase("orderId");
       const auto cancelledOrders = PrivateQuery<schema::binance::V3CancelAllOrders>(
-          _curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, params);
+          _httpClient, _apiKey, HttpRequestType::kDelete, "/api/v3/openOrders", _queryDelay, params);
       nbOrdersCancelled += static_cast<int>(cancelledOrders.size());
     } else {
       for (const OpenedOrder& order : orders) {
         params.set("orderId", order.id());
         auto cancelledOrder = PrivateQuery<schema::binance::V3CancelOrder>(
-            _curlHandle, _apiKey, HttpRequestType::kDelete, "/api/v3/order", _queryDelay, params);
+            _httpClient, _apiKey, HttpRequestType::kDelete, "/api/v3/order", _queryDelay, params);
 
         if (cancelledOrder.orderId != 0) {
           ++nbOrdersCancelled;
@@ -517,7 +517,7 @@ Deposit::Status DepositStatusFromCode(int statusInt) {
 }  // namespace
 
 DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
-  CurlPostData options;
+  HttpPostData options;
   if (depositsConstraints.isCurDefined()) {
     options.emplace_back("coin", depositsConstraints.currencyCode().str());
   }
@@ -534,7 +534,7 @@ DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depos
   }
 
   auto depositStatus = PrivateQuery<schema::binance::V1CapitalDepositHisRec>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", _queryDelay, std::move(options));
+      _httpClient, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", _queryDelay, std::move(options));
 
   Deposits deposits;
   deposits.reserve(static_cast<Deposits::size_type>(depositStatus.size()));
@@ -612,8 +612,8 @@ TimePoint RetrieveTimeStampFromWithdrawJson(const auto& withdrawJson) {
   return TimePoint{milliseconds(millisecondsSinceEpoch)};
 }
 
-CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
-  CurlPostData options;
+HttpPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
+  HttpPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.emplace_back("coin", withdrawsConstraints.currencyCode().str());
   }
@@ -634,7 +634,7 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
   // so we use Binance generated 'id' instead.
   // What is important is that the same field is considered in both queries 'launchWithdraw' and 'queryRecentWithdraws'
   auto data = PrivateQuery<schema::binance::V1CapitalWithdrawHistory>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history", _queryDelay,
+      _httpClient, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history", _queryDelay,
       CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   for (auto& withdrawJson : data) {
     if (withdrawJson.coin.size() > CurrencyCode::kMaxLen) {
@@ -658,7 +658,7 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
 }
 
 MonetaryAmountByCurrencySet BinancePrivate::AllWithdrawFeesFunc::operator()() {
-  auto result = PrivateQuery<schema::binance::V1AssetDetailMap>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  auto result = PrivateQuery<schema::binance::V1AssetDetailMap>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                                 "/sapi/v1/asset/assetDetail", _queryDelay);
   MonetaryAmountVector fees;
   for (const auto& [curCodeStr, withdrawFeeDetails] : result) {
@@ -676,7 +676,7 @@ MonetaryAmountByCurrencySet BinancePrivate::AllWithdrawFeesFunc::operator()() {
 }
 
 std::optional<MonetaryAmount> BinancePrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
-  auto result = PrivateQuery<schema::binance::V1AssetDetailMap>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  auto result = PrivateQuery<schema::binance::V1AssetDetailMap>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                                 "/sapi/v1/asset/assetDetail", _queryDelay,
                                                                 {{"asset", currencyCode.str()}});
   const auto it = result.find(currencyCode.str());
@@ -744,7 +744,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
     if (!isSimulation && toCurrencyCode == kBinanceCoinCur) {
       // Use special Binance Dust transfer
       log::info("Volume too low for standard trade, but we can use Dust transfer to trade to {}", kBinanceCoinCur);
-      auto result = PrivateQuery<schema::binance::V1AssetDust>(_curlHandle, _apiKey, HttpRequestType::kPost,
+      auto result = PrivateQuery<schema::binance::V1AssetDust>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                                "/sapi/v1/asset/dust", _queryDelay,
                                                                {{"asset", from.currencyStr()}});
       if (result.transferResult.empty()) {
@@ -768,7 +768,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
   }
   volume = sanitizedVol;
 
-  CurlPostData placePostData{
+  HttpPostData placePostData{
       {"symbol", mk.assetsPairStrUpper()}, {"side", buyOrSell}, {"type", orderType}, {"quantity", volume.amountStr()}};
 
   if (!isTakerStrategy) {
@@ -778,7 +778,7 @@ PlaceOrderInfo BinancePrivate::placeOrder(MonetaryAmount from, MonetaryAmount vo
 
   const std::string_view methodName = isSimulation ? "/api/v3/order/test" : "/api/v3/order";
 
-  auto result = PrivateQuery<schema::binance::V3NewOrder>(_curlHandle, _apiKey, HttpRequestType::kPost, methodName,
+  auto result = PrivateQuery<schema::binance::V3NewOrder>(_httpClient, _apiKey, HttpRequestType::kPost, methodName,
                                                           _queryDelay, placePostData);
   if (isSimulation) {
     placeOrderInfo.setClosed();
@@ -806,7 +806,7 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
   const string assetsStr = mk.assetsPairStrUpper();
   const std::string_view assets(assetsStr);
   const auto result = PrivateQuery<schema::binance::V3GetOrder>(
-      _curlHandle, _apiKey, requestType, "/api/v3/order", _queryDelay, {{"symbol", assets}, {"orderId", orderId}});
+      _httpClient, _apiKey, requestType, "/api/v3/order", _queryDelay, {{"symbol", assets}, {"orderId", orderId}});
 
   bool isClosed = false;
   bool queryClosedOrder = false;
@@ -821,12 +821,12 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
 
   if (queryClosedOrder) {
-    CurlPostData myTradesOpts{{"symbol", assets}};
+    HttpPostData myTradesOpts{{"symbol", assets}};
     if (result.time != 0) {
       myTradesOpts.emplace_back("startTime", result.time - 100L);  // -100 just to be sure
     }
     const auto myTradesResult = PrivateQuery<schema::binance::V3MyTrades>(
-        _curlHandle, _apiKey, HttpRequestType::kGet, "/api/v3/myTrades", _queryDelay, myTradesOpts);
+        _httpClient, _apiKey, HttpRequestType::kGet, "/api/v3/myTrades", _queryDelay, myTradesOpts);
     const auto integralOrderId =
         StringToIntegral<decltype(std::declval<decltype(myTradesResult)>()[0].orderId)>(orderId);
     for (const auto& tradeDetails : myTradesResult) {
@@ -841,12 +841,12 @@ OrderInfo BinancePrivate::queryOrder(OrderIdView orderId, const TradeContext& tr
 
 InitiatedWithdrawInfo BinancePrivate::launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) {
   const CurrencyCode currencyCode = grossAmount.currencyCode();
-  CurlPostData withdrawPostData{
+  HttpPostData withdrawPostData{
       {"coin", currencyCode.str()}, {"address", destinationWallet.address()}, {"amount", grossAmount.amountStr()}};
   if (destinationWallet.hasTag()) {
     withdrawPostData.emplace_back("addressTag", destinationWallet.tag());
   }
-  auto result = PrivateQuery<schema::binance::V1CapitalWithdrawApply>(_curlHandle, _apiKey, HttpRequestType::kPost,
+  auto result = PrivateQuery<schema::binance::V1CapitalWithdrawApply>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                                       "/sapi/v1/capital/withdraw/apply", _queryDelay,
                                                                       std::move(withdrawPostData));
   return {std::move(destinationWallet), std::move(result.id), grossAmount};
@@ -858,7 +858,7 @@ ReceivedWithdrawInfo BinancePrivate::queryWithdrawDelivery(const InitiatedWithdr
   const Wallet& wallet = initiatedWithdrawInfo.receivingWallet();
 
   auto depositStatus = PrivateQuery<schema::binance::V1CapitalDepositHisRec>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", _queryDelay,
+      _httpClient, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/deposit/hisrec", _queryDelay,
       {{"coin", currencyCode.str()}});
 
   auto newEndIt = std::ranges::remove_if(depositStatus, [&wallet](const auto& el) {

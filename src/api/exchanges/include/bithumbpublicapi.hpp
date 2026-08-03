@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencyexchange.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
@@ -75,14 +75,14 @@ class BithumbPublic : public ExchangePublic {
 
     const CoincenterInfo& _coincenterInfo;
     CommonAPI& _commonAPI;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct AllOrderBooksFunc {
     MarketOrderBookMap operator()();
 
     const CoincenterInfo& _coincenterInfo;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
@@ -90,17 +90,17 @@ class BithumbPublic : public ExchangePublic {
     MarketOrderBook operator()(Market mk, int depth);
 
     const CoincenterInfo& _coincenterInfo;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct TradedVolumeFunc {
     MonetaryAmount operator()(Market mk);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<AllOrderBooksFunc> _allOrderBooksCache;
   CachedResult<OrderBookFunc, Market, int> _orderbookCache;

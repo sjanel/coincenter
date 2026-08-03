@@ -7,8 +7,8 @@ ARG BUILD_ASAN=0
 ARG BUILD_WITH_PROMETHEUS=1
 ARG BUILD_WITH_PROTOBUF=1
 
-# Install base & build dependencies, needed certificates for curl to work with https
-RUN apk add --update --upgrade --no-cache linux-headers g++ zlib-dev openssl-dev curl-dev cmake ninja git ca-certificates
+# Install base & build dependencies, needed certificates for https to work
+RUN apk add --update --upgrade --no-cache linux-headers g++ zlib-dev openssl-dev cmake ninja git ca-certificates
 
 # Copy source files
 WORKDIR /app/src

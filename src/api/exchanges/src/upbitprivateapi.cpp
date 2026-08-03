@@ -1,6 +1,6 @@
 #include "upbitprivateapi.hpp"
 
-#include <jwt-cpp/jwt.h>
+#include <aeronet/jwt.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -22,9 +22,9 @@
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -43,7 +43,7 @@
 #include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
@@ -66,21 +66,33 @@ namespace {
 
 enum class IfError : int8_t { kThrow, kNoThrow };
 
-string ComputeAuthToken(const APIKey& apiKey, const CurlPostData& postData) {
-  auto jsonWebToken = jwt::create()
-                          .set_type("JWT")
-                          .set_payload_claim("access_key", jwt::claim(std::string(apiKey.key())))
-                          .set_payload_claim("nonce", jwt::claim(std::string(Nonce_TimeSinceEpochInMs())));
+string ComputeAuthToken(const APIKey& apiKey, const HttpPostData& postData) {
+  const std::string_view accessKey = apiKey.key();
+  const Nonce nonce = Nonce_TimeSinceEpochInMs();
 
+  // Build the JWT payload as a JSON object. The claim values (access key, numeric nonce, hex query
+  // hash) are all JSON-safe, so they can be inlined without escaping. aeronet::Jwt::encode emits the
+  // JOSE header {"alg":"HS256","typ":"JWT"} expected by Upbit.
+  string payload;
+  payload.append(R"({"access_key":")");
+  payload.append(accessKey.data(), accessKey.size());
+  payload.append(R"(","nonce":")");
+  payload.append(nonce);
+  payload.push_back('"');
   if (!postData.empty()) {
     const auto queryHash = ssl::Sha512Digest(postData.str());
-
-    jsonWebToken.set_payload_claim("query_hash", jwt::claim(std::string(queryHash.data(), queryHash.size())))
-        .set_payload_claim("query_hash_alg", jwt::claim(std::string("SHA512")));
+    payload.append(R"(,"query_hash":")");
+    payload.append(queryHash.data(), queryHash.size());
+    payload.append(R"(","query_hash_alg":"SHA512")");
   }
+  payload.push_back('}');
 
-  // hs256 does not accept std::string_view, we need a copy...
-  const auto token = jsonWebToken.sign(jwt::algorithm::hs256{std::string(apiKey.privateKey())});
+  const aeronet::JwtKey key = aeronet::JwtKey::Hmac(apiKey.privateKey());
+  const std::string token =
+      aeronet::Jwt::encode(std::string_view(payload.data(), payload.size()), key, aeronet::JwtAlgorithm::HS256);
+  if (token.empty()) {
+    throw exception("Unable to sign Upbit JWT authentication token");
+  }
 
   static constexpr std::string_view kBearerPrefix = "Bearer";
   string authStr(kBearerPrefix.size() + 1U + token.size(), ' ');
@@ -89,41 +101,41 @@ string ComputeAuthToken(const APIKey& apiKey, const CurlPostData& postData) {
   return authStr;
 }
 
-template <class T, class CurlPostDataT = CurlPostData>
-std::pair<T, schema::upbit::Error> PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey,
+template <class T, class HttpPostDataT = HttpPostData>
+std::pair<T, schema::upbit::Error> PrivateQuery(HttpClient& httpClient, const APIKey& apiKey,
                                                 HttpRequestType requestType, std::string_view endpoint,
-                                                CurlPostDataT&& curlPostData = CurlPostData(),
+                                                HttpPostDataT&& httpPostData = HttpPostData(),
                                                 int16_t nbMaxRetries = 3) {
-  CurlOptions opts(requestType, std::forward<CurlPostDataT>(curlPostData));
+  HttpRequestOptions opts(requestType, std::forward<HttpPostDataT>(httpPostData));
 
   opts.mutableHttpHeaders().emplace_back("Authorization", ComputeAuthToken(apiKey, opts.postData()));
 
   RequestRetry requestRetry(
-      curlHandle, std::move(opts),
+      httpClient, std::move(opts),
       QueryRetryPolicy{.initialRetryDelay = seconds{1}, .exponentialBackoff = 1.5, .nbMaxRetries = nbMaxRetries});
 
-  return schema::upbit::GetOrValueInitialized<T>(requestRetry, endpoint, [&apiKey](CurlOptions& curlOptions) {
-    curlOptions.mutableHttpHeaders().set_back("Authorization", ComputeAuthToken(apiKey, curlOptions.postData()));
+  return schema::upbit::GetOrValueInitialized<T>(requestRetry, endpoint, [&apiKey](HttpRequestOptions& requestOptions) {
+    requestOptions.mutableHttpHeaders().set_back("Authorization", ComputeAuthToken(apiKey, requestOptions.postData()));
   });
 }
 }  // namespace
 
 UpbitPrivate::UpbitPrivate(const CoincenterInfo& config, UpbitPublic& upbitPublic, const APIKey& apiKey)
     : ExchangePrivate(config, upbitPublic, apiKey),
-      _curlHandle(UpbitPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+      _httpClient(UpbitPublic::kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
                   config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
-          _curlHandle, _apiKey, exchangeConfig().asset, upbitPublic._commonApi),
+          _httpClient, _apiKey, exchangeConfig().asset, upbitPublic._commonApi),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
-          _curlHandle, _apiKey, upbitPublic),
+          _httpClient, _apiKey, upbitPublic),
       _withdrawalFeesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::withdrawalFees), _cachedResultVault),
-          _curlHandle, _apiKey, upbitPublic) {}
+          _httpClient, _apiKey, upbitPublic) {}
 
 bool UpbitPrivate::validateApiKey() {
-  auto ret = PrivateQuery<schema::upbit::V1ApiKeys>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/api_keys").first;
+  auto ret = PrivateQuery<schema::upbit::V1ApiKeys>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/api_keys").first;
   return !ret.empty();
 }
 
@@ -131,7 +143,7 @@ CurrencyExchangeFlatSet UpbitPrivate::TradableCurrenciesFunc::operator()() {
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
   CurrencyExchangeVector currencies;
   auto result =
-      PrivateQuery<schema::upbit::V1StatusWallets>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/status/wallet")
+      PrivateQuery<schema::upbit::V1StatusWallets>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/status/wallet")
           .first;
   for (const auto& curDetails : result) {
     if (curDetails.currency.size() > CurrencyCode::kMaxLen) {
@@ -185,7 +197,7 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 
   BalancePortfolio balancePortfolio;
 
-  auto ret = PrivateQuery<schema::upbit::V1Accounts>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/accounts").first;
+  auto ret = PrivateQuery<schema::upbit::V1Accounts>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/accounts").first;
 
   balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(ret.size()));
 
@@ -207,8 +219,8 @@ BalancePortfolio UpbitPrivate::queryAccountBalance(const BalanceOptions& balance
 }
 
 Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  CurlPostData postData{{"currency", currencyCode.str()}, {"net_type", currencyCode.str()}};
-  auto [result, error] = PrivateQuery<schema::upbit::V1DepositCoinAddress>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  HttpPostData postData{{"currency", currencyCode.str()}, {"net_type", currencyCode.str()}};
+  auto [result, error] = PrivateQuery<schema::upbit::V1DepositCoinAddress>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                                            "/v1/deposits/coin_address", postData, 1);
   bool generateDepositAddressNeeded = false;
   if (std::holds_alternative<string>(error.error.name)) {
@@ -222,7 +234,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   }
   if (generateDepositAddressNeeded) {
     auto genCoinAddressResult =
-        PrivateQuery<schema::upbit::V1DepositsGenerateCoinAddress>(_curlHandle, _apiKey, HttpRequestType::kPost,
+        PrivateQuery<schema::upbit::V1DepositsGenerateCoinAddress>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                                    "/v1/deposits/generate_coin_address", postData)
             .first;
     if (genCoinAddressResult.success) {
@@ -231,7 +243,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
       log::error("Failed to generate address (or unexpected answer), message: {}", genCoinAddressResult.message);
     }
     log::info("Waiting for address to be generated...");
-    result = PrivateQuery<schema::upbit::V1DepositCoinAddress>(_curlHandle, _apiKey, HttpRequestType::kGet,
+    result = PrivateQuery<schema::upbit::V1DepositCoinAddress>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                                "/v1/deposits/coin_address", postData, 10)
                  .first;
   }
@@ -253,7 +265,7 @@ Wallet UpbitPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 
 namespace {
 template <class OrderVectorType>
-void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHandle, const APIKey& apiKey,
+void FillOrders(const OrdersConstraints& ordersConstraints, HttpClient& httpClient, const APIKey& apiKey,
                 ExchangePublic& exchangePublic, OrderVectorType& orderVector) {
   using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
 
@@ -261,7 +273,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
 
   static constexpr bool kIsOpenedOrder = std::is_same_v<OrderType, OpenedOrder>;
 
-  CurlPostData params;
+  HttpPostData params;
 
   static constexpr int kMaxNbOrdersPerPage = kIsOpenedOrder ? 100 : 1000;
   static constexpr auto kNbMaxPagesToRetrieve = kIsOpenedOrder ? 10 : 1;
@@ -295,7 +307,7 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
     std::string_view endpoint = kIsOpenedOrder ? kOpenedOrdersEndpoint : kClosedOrdersEndpoint;
 
     auto data =
-        PrivateQuery<schema::upbit::V1Orders>(curlHandle, apiKey, HttpRequestType::kGet, endpoint, params).first;
+        PrivateQuery<schema::upbit::V1Orders>(httpClient, apiKey, HttpRequestType::kGet, endpoint, params).first;
 
     nbOrdersRetrieved = static_cast<decltype(nbOrdersRetrieved)>(data.size());
 
@@ -376,14 +388,14 @@ void FillOrders(const OrdersConstraints& ordersConstraints, CurlHandle& curlHand
 
 ClosedOrderVector UpbitPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
   ClosedOrderVector closedOrders;
-  FillOrders(closedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, closedOrders);
+  FillOrders(closedOrdersConstraints, _httpClient, _apiKey, _exchangePublic, closedOrders);
   log::info("Retrieved {} closed orders from {}", closedOrders.size(), _exchangePublic.name());
   return closedOrders;
 }
 
 OpenedOrderVector UpbitPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   OpenedOrderVector openedOrders;
-  FillOrders(openedOrdersConstraints, _curlHandle, _apiKey, _exchangePublic, openedOrders);
+  FillOrders(openedOrdersConstraints, _httpClient, _apiKey, _exchangePublic, openedOrders);
   log::info("Retrieved {} opened orders from {}", openedOrders.size(), _exchangePublic.name());
   return openedOrders;
 }
@@ -426,7 +438,7 @@ constexpr int kNbResultsPerPage = 100;
 
 DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
-  CurlPostData options{{"limit", kNbResultsPerPage}};
+  HttpPostData options{{"limit", kNbResultsPerPage}};
   if (depositsConstraints.isCurDefined()) {
     options.emplace_back("currency", depositsConstraints.currencyCode().str());
   }
@@ -441,7 +453,7 @@ DepositsSet UpbitPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
     options.set("page", page);
     auto result =
-        PrivateQuery<schema::upbit::V1Deposits>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/deposits", options)
+        PrivateQuery<schema::upbit::V1Deposits>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/deposits", options)
             .first;
     if (deposits.empty()) {
       deposits.reserve(static_cast<Deposits::size_type>(result.size()));
@@ -494,8 +506,8 @@ Withdraw::Status WithdrawStatusFromStatus(schema::upbit::V1Withdraw::State statu
   }
 }
 
-CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
-  CurlPostData options{{"limit", kNbResultsPerPage}};
+HttpPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
+  HttpPostData options{{"limit", kNbResultsPerPage}};
   if (withdrawsConstraints.isCurDefined()) {
     options.emplace_back("currency", withdrawsConstraints.currencyCode().str());
   }
@@ -512,12 +524,12 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
 
 WithdrawsSet UpbitPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   Withdraws withdraws;
-  CurlPostData options = CreateOptionsFromWithdrawConstraints(withdrawsConstraints);
+  HttpPostData options = CreateOptionsFromWithdrawConstraints(withdrawsConstraints);
   // To make sure we retrieve all results, ask for next page when maximum results per page is returned
   for (int nbResults = kNbResultsPerPage, page = 1; nbResults == kNbResultsPerPage; ++page) {
     options.set("page", page);
     auto result =
-        PrivateQuery<schema::upbit::V1Withdraws>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options)
+        PrivateQuery<schema::upbit::V1Withdraws>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/withdraws", options)
             .first;
     if (withdraws.empty()) {
       withdraws.reserve(static_cast<Withdraws::size_type>(result.size()));
@@ -622,7 +634,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   const std::string_view marketOrPrice = fromCurrencyCode == mk.base() ? "market" : "price";
   const std::string_view orderType = isTakerStrategy ? marketOrPrice : "limit";
 
-  CurlPostData placePostData{
+  HttpPostData placePostData{
       {"market", UpbitPublic::ReverseMarketStr(mk)}, {"side", askOrBid}, {"ord_type", orderType}};
 
   PlaceOrderInfo placeOrderInfo(OrderInfo(TradedAmounts(fromCurrencyCode, toCurrencyCode)), OrderId("UndefinedId"));
@@ -652,7 +664,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
     placePostData.emplace_back("price", price.amountStr());
   }
 
-  auto placeOrderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kPost,
+  auto placeOrderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                                   "/v1/orders", placePostData)
                            .first;
 
@@ -662,7 +674,7 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   // Upbit takes some time to match the market order - We should wait that it has been matched
   bool takerOrderNotClosed = isTakerStrategy && !placeOrderInfo.orderInfo.isClosed;
   while (takerOrderNotClosed) {
-    auto orderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order",
+    auto orderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/order",
                                                                {{"uuid", placeOrderInfo.orderId}})
                         .first;
 
@@ -674,14 +686,14 @@ PlaceOrderInfo UpbitPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 }
 
 OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
-  CurlPostData postData{{"uuid", orderId}};
+  HttpPostData postData{{"uuid", orderId}};
   auto orderRes =
-      PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kDelete, "/v1/order", postData)
+      PrivateQuery<schema::upbit::V1SingleOrder>(_httpClient, _apiKey, HttpRequestType::kDelete, "/v1/order", postData)
           .first;
   bool cancelledOrderClosed = IsOrderClosed(orderRes.state);
   while (!cancelledOrderClosed) {
     orderRes =
-        PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order", postData)
+        PrivateQuery<schema::upbit::V1SingleOrder>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/order", postData)
             .first;
     cancelledOrderClosed = IsOrderClosed(orderRes.state);
   }
@@ -689,7 +701,7 @@ OrderInfo UpbitPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tra
 }
 
 OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) {
-  auto orderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_curlHandle, _apiKey, HttpRequestType::kGet, "/v1/order",
+  auto orderRes = PrivateQuery<schema::upbit::V1SingleOrder>(_httpClient, _apiKey, HttpRequestType::kGet, "/v1/order",
                                                              {{"uuid", orderId}})
                       .first;
   const CurrencyCode fromCurrencyCode(tradeContext.fromCur());
@@ -699,7 +711,7 @@ OrderInfo UpbitPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
 std::optional<MonetaryAmount> UpbitPrivate::WithdrawFeesFunc::operator()(CurrencyCode currencyCode) {
   auto curStr = currencyCode.str();
   auto result = PrivateQuery<schema::upbit::V1WithdrawChance>(
-                    _curlHandle, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
+                    _httpClient, _apiKey, HttpRequestType::kGet, "/v1/withdraws/chance",
                     {{"currency", std::string_view{curStr}}, {"net_type", std::string_view{curStr}}})
                     .first;
   return MonetaryAmount(result.currency.withdraw_fee, currencyCode);
@@ -709,7 +721,7 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   const CurrencyCode currencyCode = grossAmount.currencyCode();
   MonetaryAmount withdrawFee = _exchangePublic.queryWithdrawalFeeOrZero(currencyCode);
   MonetaryAmount netEmittedAmount = grossAmount - withdrawFee;
-  CurlPostData withdrawPostData{{"currency", currencyCode.str()},
+  HttpPostData withdrawPostData{{"currency", currencyCode.str()},
                                 {"net_type", currencyCode.str()},
                                 {"amount", netEmittedAmount.amountStr()},
                                 {"address", destinationWallet.address()}};
@@ -717,7 +729,7 @@ InitiatedWithdrawInfo UpbitPrivate::launchWithdraw(MonetaryAmount grossAmount, W
     withdrawPostData.emplace_back("secondary_address", destinationWallet.tag());
   }
 
-  auto result = PrivateQuery<schema::upbit::V1WithdrawsCoin>(_curlHandle, _apiKey, HttpRequestType::kPost,
+  auto result = PrivateQuery<schema::upbit::V1WithdrawsCoin>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                              "/v1/withdraws/coin", std::move(withdrawPostData))
                     .first;
   return {std::move(destinationWallet), std::move(result.uuid), grossAmount};

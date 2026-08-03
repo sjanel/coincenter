@@ -3,7 +3,7 @@
 #include <optional>
 
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
@@ -69,7 +69,7 @@ class KrakenPublic : public ExchangePublic {
 
     const CoincenterInfo& _coincenterInfo;
     CommonAPI& _commonApi;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
@@ -85,7 +85,7 @@ class KrakenPublic : public ExchangePublic {
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     const CoincenterInfo& _coincenterInfo;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
@@ -95,7 +95,7 @@ class KrakenPublic : public ExchangePublic {
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
     const CoincenterInfo& _coincenterInfo;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct OrderBookFunc {
@@ -103,7 +103,7 @@ class KrakenPublic : public ExchangePublic {
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
     CachedResult<MarketsFunc>& _marketsCache;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct TickerFunc {
@@ -112,10 +112,10 @@ class KrakenPublic : public ExchangePublic {
     Last24hTradedVolumeAndLatestPricePair operator()(Market mk);
 
     CachedResult<TradableCurrenciesFunc>& _tradableCurrenciesCache;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<AllOrderBooksFunc, int> _allOrderBooksCache;

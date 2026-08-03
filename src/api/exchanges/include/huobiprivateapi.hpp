@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "tradeinfo.hpp"
@@ -61,19 +61,19 @@ class HuobiPrivate : public ExchangePrivate {
   struct AccountIdFunc {
     int64_t operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
   };
 
   struct DepositWalletFunc {
     Wallet operator()(CurrencyCode currencyCode);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
     const HuobiPublic& _huobiPublic;
   };
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<AccountIdFunc> _accountIdCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };

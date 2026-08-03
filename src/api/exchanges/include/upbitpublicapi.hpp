@@ -5,7 +5,7 @@
 
 #include "cachedresult.hpp"
 #include "cct_string.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycodeset.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
@@ -70,14 +70,14 @@ class UpbitPublic : public ExchangePublic {
   struct MarketsFunc {
     MarketSet operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
   struct TradableCurrenciesFunc {
     CurrencyExchangeFlatSet operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     CachedResult<MarketsFunc>& _marketsCache;
   };
 
@@ -91,29 +91,29 @@ class UpbitPublic : public ExchangePublic {
   struct AllOrderBooksFunc {
     MarketOrderBookMap operator()(int depth);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     CachedResult<MarketsFunc>& _marketsCache;
   };
 
   struct OrderBookFunc {
     MarketOrderBook operator()(Market mk, int depth);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct TradedVolumeFunc {
     MonetaryAmount operator()(Market mk);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct TickerFunc {
     MonetaryAmount operator()(Market mk);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<MarketsFunc> _marketsCache;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<WithdrawalFeesFunc> _withdrawalFeesCache;

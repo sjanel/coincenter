@@ -22,7 +22,7 @@
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
 #include "durationstring.hpp"
-#include "exchange-permanent-curl-options.hpp"
+#include "exchange-permanent-http-options.hpp"
 #include "exchange-tradefees-config.hpp"
 #include "exchangename.hpp"
 #include "exchangeprivateapitypes.hpp"
@@ -34,7 +34,7 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "orderid.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "priceoptions.hpp"
 #include "priceoptionsdef.hpp"
 #include "recentdeposit.hpp"
@@ -642,7 +642,7 @@ SentWithdrawInfo ExchangePrivate::isWithdrawSuccessfullySent(const InitiatedWith
   return {currencyCode};
 }
 
-PermanentCurlOptions::Builder ExchangePrivate::permanentCurlOptionsBuilder() const {
-  return ExchangePermanentCurlOptions(exchangeConfig().query).builderBase(ExchangePermanentCurlOptions::Api::Private);
+PermanentRequestOptions::Builder ExchangePrivate::permanentHttpRequestOptionsBuilder() const {
+  return ExchangePermanentHttpOptions(exchangeConfig().query).builderBase(ExchangePermanentHttpOptions::Api::Private);
 }
 }  // namespace cct::api

@@ -20,7 +20,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "priceoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "time-window.hpp"
@@ -210,7 +210,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   /// Retrieve an ordered vector of recent last trades
   virtual PublicTradeVector queryLastTrades(Market mk, int nbTrades = kNbLastTradesDefault) = 0;
 
-  PermanentCurlOptions::Builder permanentCurlOptionsBuilder() const;
+  PermanentRequestOptions::Builder permanentHttpRequestOptionsBuilder() const;
 
   ExchangeNameEnum _exchangeNameEnum;
   CachedResultVault _cachedResultVault;

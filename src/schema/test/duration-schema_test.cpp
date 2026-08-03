@@ -18,7 +18,7 @@ TEST(DurationSchemaTest, FromJsonKey) {
   UnorderedMap map;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts{.raw_string = true}>(map, R"({"2w56h":true,"1009s17ms":false})");
+  auto ec = json::read<json::opts_ex{.raw_string = true}>(map, R"({"2w56h":true,"1009s17ms":false})");
 
   ASSERT_FALSE(ec);
 
@@ -34,7 +34,7 @@ TEST(DurationSchemaTest, ToJsonKey) {
   string str;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::write<json::opts{.raw_string = true}>(map, str);
+  auto ec = json::write<json::opts_ex{.raw_string = true}>(map, str);
 
   ASSERT_FALSE(ec);
 
@@ -53,7 +53,7 @@ TEST(DurationSchemaTest, ToJsonValue) {
   string str;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::write<json::opts{.raw_string = true}>(foo, str);
+  auto ec = json::write<json::opts_ex{.raw_string = true}>(foo, str);
 
   ASSERT_FALSE(ec);
 
@@ -64,7 +64,7 @@ TEST(DurationSchemaTest, FromJsonValue) {
   Foo foo;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts{.raw_string = true}>(foo, R"({"dur":"34d6h42min56s"})");
+  auto ec = json::read<json::opts_ex{.raw_string = true}>(foo, R"({"dur":"34d6h42min56s"})");
 
   ASSERT_FALSE(ec);
 

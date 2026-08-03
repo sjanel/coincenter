@@ -10,13 +10,13 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
-#include "curloptions.hpp"
+#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "fiats-converter-responses-schema.hpp"
 #include "file.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "read-json.hpp"
 #include "reader.hpp"
 #include "timedef.hpp"
@@ -28,8 +28,8 @@ namespace {
 constexpr std::string_view kRatesCacheFile = "ratescache.json";
 constexpr std::string_view kThirdPartySecretFileName = "thirdparty_secret.json";
 
-constexpr std::string_view kFiatConverterSource1BaseUrl = "https://free.currconv.com";
-constexpr std::string_view kFiatConverterSource2BaseUrl = "https://api.vatcomply.com/rates";
+constexpr std::string_view kFiatConverterSource1Url = "https://free.currconv.com/api/v7/convert";
+constexpr std::string_view kFiatConverterSource2Url = "https://api.vatcomply.com/rates";
 
 File GetRatesCacheFile(std::string_view dataDir) {
   return {dataDir, File::Type::kCache, kRatesCacheFile, File::IfError::kNoThrow};
@@ -47,18 +47,12 @@ FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration rate
 
 FiatConverter::FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency,
                              const Reader& fiatsRatesCacheReader, const Reader& thirdPartySecretReader)
-    : _curlHandle1(kFiatConverterSource1BaseUrl, coincenterInfo.metricGatewayPtr(),
-                   PermanentCurlOptions::Builder()
-                       .setRequestCallLogLevel(LogLevel::info)
-                       .setRequestAnswerLogLevel(LogLevel::debug)
-                       .build(),
-                   coincenterInfo.getRunMode()),
-      _curlHandle2(kFiatConverterSource2BaseUrl, coincenterInfo.metricGatewayPtr(),
-                   PermanentCurlOptions::Builder()
-                       .setRequestCallLogLevel(LogLevel::info)
-                       .setRequestAnswerLogLevel(LogLevel::debug)
-                       .build(),
-                   coincenterInfo.getRunMode()),
+    : _httpClient(kNoBaseUrl, coincenterInfo.metricGatewayPtr(),
+                  PermanentRequestOptions::Builder()
+                      .setRequestCallLogLevel(LogLevel::info)
+                      .setRequestAnswerLogLevel(LogLevel::debug)
+                      .build(),
+                  coincenterInfo.getRunMode()),
       _ratesUpdateFrequency(ratesUpdateFrequency),
       _thirdPartySecret(LoadCurrencyConverterAPIKey(thirdPartySecretReader)),
       _dataDir(coincenterInfo.dataDir()) {
@@ -89,9 +83,9 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market market) {
 std::optional<double> FiatConverter::queryCurrencyRateSource1(Market market) {
   const auto qStr = market.assetsPairStrUpper('_');
 
-  const CurlOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _thirdPartySecret.freecurrencyconverter}});
+  const HttpRequestOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _thirdPartySecret.freecurrencyconverter}});
 
-  const auto dataStr = _curlHandle1.query("/api/v7/convert", opts);
+  const auto dataStr = _httpClient.query(kFiatConverterSource1Url, opts);
 
   schema::FreeCurrencyConverterResponse response;
 
@@ -114,7 +108,7 @@ std::optional<double> FiatConverter::queryCurrencyRateSource1(Market market) {
 }
 
 std::optional<double> FiatConverter::queryCurrencyRateSource2(Market market) {
-  const auto dataStr = _curlHandle2.query("", CurlOptions(HttpRequestType::kGet));
+  const auto dataStr = _httpClient.query(kFiatConverterSource2Url, HttpRequestOptions(HttpRequestType::kGet));
 
   schema::FiatRatesSource2Response response;
 

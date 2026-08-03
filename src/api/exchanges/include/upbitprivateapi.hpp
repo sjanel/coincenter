@@ -5,7 +5,7 @@
 #include "balanceoptions.hpp"
 #include "balanceportfolio.hpp"
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "depositsconstraints.hpp"
@@ -74,7 +74,7 @@ class UpbitPrivate : public ExchangePrivate {
   struct TradableCurrenciesFunc {
     CurrencyExchangeFlatSet operator()();
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
     const schema::ExchangeAssetConfig& _assetConfig;
     CommonAPI& _commonApi;
@@ -83,7 +83,7 @@ class UpbitPrivate : public ExchangePrivate {
   struct DepositWalletFunc {
     Wallet operator()(CurrencyCode currencyCode);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
     UpbitPublic& _exchangePublic;
   };
@@ -91,7 +91,7 @@ class UpbitPrivate : public ExchangePrivate {
   struct WithdrawFeesFunc {
     std::optional<MonetaryAmount> operator()(CurrencyCode currencyCode);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
     UpbitPublic& _exchangePublic;
   };
@@ -99,7 +99,7 @@ class UpbitPrivate : public ExchangePrivate {
   void applyFee(Market mk, CurrencyCode fromCurrencyCode, bool isTakerStrategy, MonetaryAmount& from,
                 MonetaryAmount& volume);
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<TradableCurrenciesFunc> _tradableCurrenciesCache;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
   CachedResult<WithdrawFeesFunc, CurrencyCode> _withdrawalFeesCache;

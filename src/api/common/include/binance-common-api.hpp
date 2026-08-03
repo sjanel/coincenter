@@ -4,7 +4,7 @@
 
 #include "binance-common-schema.hpp"
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -15,14 +15,14 @@
 namespace cct {
 
 class AbstractMetricGateway;
-class PermanentCurlOptions;
+class PermanentRequestOptions;
 
 namespace api {
 
 class BinanceGlobalInfos {
  public:
   BinanceGlobalInfos(CachedResultOptions&& cachedResultOptions, AbstractMetricGateway* pMetricGateway,
-                     const PermanentCurlOptions& permanentCurlOptions, settings::RunMode runMode);
+                     const PermanentRequestOptions& permanentHttpRequestOptions, settings::RunMode runMode);
 
   MonetaryAmountByCurrencySet queryWithdrawalFees();
 
@@ -35,13 +35,13 @@ class BinanceGlobalInfos {
 
   class BinanceGlobalInfosFunc {
    public:
-    BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentCurlOptions& permanentCurlOptions,
+    BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentRequestOptions& permanentHttpRequestOptions,
                            settings::RunMode runMode);
 
     schema::binance::NetworkCoinDataVector operator()();
 
    private:
-    CurlHandle _curlHandle;
+    HttpClient _httpClient;
   };
 
   static CurrencyExchangeFlatSet ExtractTradableCurrencies(

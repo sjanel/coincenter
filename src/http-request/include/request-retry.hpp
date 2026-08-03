@@ -8,8 +8,8 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_type_traits.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
 #include "durationstring.hpp"
 #include "query-retry-policy.hpp"
 #include "timedef.hpp"
@@ -18,29 +18,29 @@
 
 namespace cct {
 
-/// Utility class to factorize basic retry mechanism around curlHandle query.
+/// Utility class to factorize basic retry mechanism around httpClient query.
 /// Request options remain constant during calls.
 class RequestRetry {
  public:
   enum class Status : int8_t { kResponseError, kResponseOK };
 
  private:
+  // {raw_string, error_on_const_read} are opts_ex (derived) members; base members
+  // (error_on_unknown_keys, minified) go in the nested brace.
   static constexpr auto kDefaultJsonOpts =
-      json::opts{.error_on_unknown_keys = false,  // NOLINT(readability-implicit-bool-conversion)
-                 .minified = true,                // NOLINT(readability-implicit-bool-conversion)
-                 .error_on_const_read = true,     // NOLINT(readability-implicit-bool-conversion)
-                 .raw_string = true};             // NOLINT(readability-implicit-bool-conversion)
+      json::opts_ex{{.error_on_unknown_keys = false, .minified = true}, /*raw_string*/ true,
+                    /*error_on_const_read*/ true};
 
  public:
-  RequestRetry(CurlHandle &curlHandle, CurlOptions curlOptions, QueryRetryPolicy queryRetryPolicy = QueryRetryPolicy())
-      : _curlHandle(curlHandle), _curlOptions(std::move(curlOptions)), _queryRetryPolicy(queryRetryPolicy) {}
+  RequestRetry(HttpClient &httpClient, HttpRequestOptions requestOptions, QueryRetryPolicy queryRetryPolicy = QueryRetryPolicy())
+      : _httpClient(httpClient), _requestOptions(std::move(requestOptions)), _queryRetryPolicy(queryRetryPolicy) {}
 
-  template <class T, json::opts opts = kDefaultJsonOpts>
+  template <class T, auto opts = kDefaultJsonOpts>
   T query(const auto &endpoint, auto responseStatus) {
-    return query<T, opts>(endpoint, responseStatus, [](CurlOptions &) {});
+    return query<T, opts>(endpoint, responseStatus, [](HttpRequestOptions &) {});
   }
 
-  template <class T, json::opts opts = kDefaultJsonOpts>
+  template <class T, auto opts = kDefaultJsonOpts>
   T query(const auto &endpoint, auto responseStatus, auto postDataUpdateFunc) {
     auto sleepingTime = _queryRetryPolicy.initialRetryDelay;
     decltype(_queryRetryPolicy.nbMaxRetries) nbRetries = 0;
@@ -59,13 +59,13 @@ class RequestRetry {
         sleepingTime *= _queryRetryPolicy.exponentialBackoff;
       }
 
-      postDataUpdateFunc(_curlOptions);
+      postDataUpdateFunc(_requestOptions);
 
-      auto queryStrRes = _curlHandle.query(endpoint, _curlOptions);
+      auto queryStrRes = _httpClient.query(endpoint, _requestOptions);
       auto ec = json::read<opts>(ret, queryStrRes);
       if (ec) {
         auto prefixJsonContent = queryStrRes.substr(0, std::min<int>(queryStrRes.size(), 30));
-        log::error("For endpoint {}{} - error while reading json content '{}{}': {}", _curlHandle.getNextBaseUrl(),
+        log::error("For endpoint {}{} - error while reading json content '{}{}': {}", _httpClient.getNextBaseUrl(),
                    endpoint, prefixJsonContent, prefixJsonContent.size() < queryStrRes.size() ? "..." : "",
                    json::format_error(ec, queryStrRes));
         parsingError = true;
@@ -92,11 +92,11 @@ class RequestRetry {
     return ret;
   }
 
-  using trivially_relocatable = is_trivially_relocatable<CurlOptions>::type;
+  using trivially_relocatable = is_trivially_relocatable<HttpRequestOptions>::type;
 
  private:
-  CurlHandle &_curlHandle;
-  CurlOptions _curlOptions;
+  HttpClient &_httpClient;
+  HttpRequestOptions _requestOptions;
   QueryRetryPolicy _queryRetryPolicy;
 };
 

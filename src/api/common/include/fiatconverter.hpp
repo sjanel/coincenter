@@ -11,7 +11,7 @@
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
@@ -113,8 +113,7 @@ class FiatConverter : public CacheFileUpdatorInterface {
   VisitedCurrencyCodesSet _visitedCurrencies;
   vector<std::pair<Market, PriceTimedValue>> _tmpPriceRatesVector;
 
-  CurlHandle _curlHandle1;
-  CurlHandle _curlHandle2;
+  HttpClient _httpClient;
   PricesMap _pricesMap;
   Duration _ratesUpdateFrequency;
   std::mutex _pricesMutex;

@@ -26,7 +26,7 @@ struct Error {
 template <class T>
 std::pair<T, Error> GetOrValueInitialized(
     RequestRetry& requestRetry, std::string_view endpoint,
-    std::function<void(CurlOptions&)> postDataUpdateFunc = [](CurlOptions&) {}) {
+    std::function<void(HttpRequestOptions&)> postDataUpdateFunc = [](HttpRequestOptions&) {}) {
   using VarT = std::variant<schema::upbit::Error, T>;
 
   VarT varT = requestRetry.query<VarT>(

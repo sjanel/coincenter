@@ -23,9 +23,9 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
@@ -41,7 +41,7 @@
 #include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
@@ -78,16 +78,16 @@ string BuildParamStr(HttpRequestType requestType, std::string_view baseUrl, std:
   return paramsStr;
 }
 
-auto ComputePostDataFormat(HttpRequestType requestType, const CurlPostData& postData) {
-  CurlOptions::PostDataFormat postDataFormat = CurlOptions::PostDataFormat::kString;
+auto ComputePostDataFormat(HttpRequestType requestType, const HttpPostData& postData) {
+  HttpRequestOptions::PostDataFormat postDataFormat = HttpRequestOptions::PostDataFormat::kString;
   if (!postData.empty() && requestType != HttpRequestType::kGet) {
-    postDataFormat = CurlOptions::PostDataFormat::json;
+    postDataFormat = HttpRequestOptions::PostDataFormat::json;
   }
   return postDataFormat;
 }
 
-void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType,
-                          std::string_view endpoint, CurlPostData& postData, CurlPostData& signaturePostData) {
+void SetNonceAndSignature(HttpClient& httpClient, const APIKey& apiKey, HttpRequestType requestType,
+                          std::string_view endpoint, HttpPostData& postData, HttpPostData& signaturePostData) {
   auto isNotEncoded = [](char ch) { return isalnum(ch) || ch == '-' || ch == '.' || ch == '_' || ch == '~'; };
 
   static constexpr std::string_view kSignatureKey = "Signature";
@@ -106,25 +106,25 @@ void SetNonceAndSignature(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequ
   }
 
   signaturePostData.emplace_back(
-      kSignatureKey, URLEncode(B64Encode(ssl::Sha256Bin(BuildParamStr(requestType, curlHandle.getNextBaseUrl(),
+      kSignatureKey, URLEncode(B64Encode(ssl::Sha256Bin(BuildParamStr(requestType, httpClient.getNextBaseUrl(),
                                                                       endpoint, signaturePostData.str()),
                                                         apiKey.privateKey())),
                                isNotEncoded));
 }
 
 template <class T>
-T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
-               CurlPostData&& postData = CurlPostData()) {
-  CurlPostData signaturePostData{
+T PrivateQuery(HttpClient& httpClient, const APIKey& apiKey, HttpRequestType requestType, std::string_view endpoint,
+               HttpPostData&& postData = HttpPostData()) {
+  HttpPostData signaturePostData{
       {"AccessKeyId", apiKey.key()}, {"SignatureMethod", "HmacSHA256"}, {"SignatureVersion", 2}};
 
   string method(endpoint.size() + 1U, '?');
 
   std::memcpy(method.data(), endpoint.data(), endpoint.size());
 
-  CurlOptions::PostDataFormat postDataFormat = ComputePostDataFormat(requestType, postData);
+  HttpRequestOptions::PostDataFormat postDataFormat = ComputePostDataFormat(requestType, postData);
 
-  RequestRetry requestRetry(curlHandle, CurlOptions(requestType, std::move(postData), postDataFormat),
+  RequestRetry requestRetry(httpClient, HttpRequestOptions(requestType, std::move(postData), postDataFormat),
                             QueryRetryPolicy{.initialRetryDelay = seconds{1}, .nbMaxRetries = 3});
   return requestRetry.query<T>(
       method,
@@ -151,8 +151,8 @@ T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, HttpRequestType req
         }
         return RequestRetry::Status::kResponseOK;
       },
-      [&signaturePostData, &curlHandle, &apiKey, requestType, endpoint, &method](CurlOptions& opts) {
-        SetNonceAndSignature(curlHandle, apiKey, requestType, endpoint, opts.mutablePostData(), signaturePostData);
+      [&signaturePostData, &httpClient, &apiKey, requestType, endpoint, &method](HttpRequestOptions& opts) {
+        SetNonceAndSignature(httpClient, apiKey, requestType, endpoint, opts.mutablePostData(), signaturePostData);
 
         method.replace(method.begin() + endpoint.size() + 1U, method.end(), signaturePostData.str());
       });
@@ -164,16 +164,16 @@ constexpr std::string_view kBaseUrlOrders = "/v1/order/orders/";
 
 HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& huobiPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, huobiPublic, apiKey),
-      _curlHandle(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+      _httpClient(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
-      _accountIdCache(CachedResultOptions(std::chrono::hours(48), _cachedResultVault), _curlHandle, apiKey),
+      _accountIdCache(CachedResultOptions(std::chrono::hours(48), _cachedResultVault), _httpClient, apiKey),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
-          _curlHandle, _apiKey, huobiPublic) {}
+          _httpClient, _apiKey, huobiPublic) {}
 
 bool HuobiPrivate::validateApiKey() {
-  const auto result = PrivateQuery<schema::huobi::V1AccountAccounts>(_curlHandle, _apiKey, HttpRequestType::kGet,
-                                                                     "/v1/account/accounts", CurlPostData());
+  const auto result = PrivateQuery<schema::huobi::V1AccountAccounts>(_httpClient, _apiKey, HttpRequestType::kGet,
+                                                                     "/v1/account/accounts", HttpPostData());
 
   return result.status == "ok" && !result.data.empty();
 }
@@ -181,7 +181,7 @@ bool HuobiPrivate::validateApiKey() {
 BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   const auto method = cct::format("/v1/account/accounts/{}/balance", _accountIdCache.get());
   const auto result =
-      PrivateQuery<schema::huobi::V1AccountAccountsBalance>(_curlHandle, _apiKey, HttpRequestType::kGet, method);
+      PrivateQuery<schema::huobi::V1AccountAccountsBalance>(_httpClient, _apiKey, HttpRequestType::kGet, method);
   const bool withBalanceInUse =
       balanceOptions.amountIncludePolicy() == BalanceOptions::AmountIncludePolicy::kWithBalanceInUse;
 
@@ -206,7 +206,7 @@ BalancePortfolio HuobiPrivate::queryAccountBalance(const BalanceOptions& balance
 Wallet HuobiPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   string lowerCaseCur = ToLower(currencyCode.str());
   auto result = PrivateQuery<schema::huobi::V2AccountDepositAddress>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address", {{"currency", lowerCaseCur}});
+      _httpClient, _apiKey, HttpRequestType::kGet, "/v2/account/deposit/address", {{"currency", lowerCaseCur}});
 
   string address;
   std::string_view tag;
@@ -247,7 +247,7 @@ TradeSide TradeSideFromTypeStr(std::string_view typeSide) {
 ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
   ClosedOrderVector closedOrders;
 
-  CurlPostData params;
+  HttpPostData params;
 
   if (closedOrdersConstraints.isPlacedTimeBeforeDefined()) {
     params.emplace_back("end-time", TimestampToMillisecondsSinceEpoch(closedOrdersConstraints.placedBefore()));
@@ -270,7 +270,7 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
   const std::string_view closedOrdersEndpoint =
       closedOrdersConstraints.isMarketDefined() ? "/v1/order/orders" : "/v1/order/history";
 
-  const auto result = PrivateQuery<schema::huobi::V1Orders>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  const auto result = PrivateQuery<schema::huobi::V1Orders>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                             closedOrdersEndpoint, std::move(params));
 
   MarketSet markets;
@@ -313,7 +313,7 @@ ClosedOrderVector HuobiPrivate::queryClosedOrders(const OrdersConstraints& close
 }
 
 OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
-  CurlPostData params;
+  HttpPostData params;
 
   MarketSet markets;
 
@@ -326,7 +326,7 @@ OpenedOrderVector HuobiPrivate::queryOpenedOrders(const OrdersConstraints& opene
     }
   }
 
-  auto result = PrivateQuery<schema::huobi::V1OrderOpenOrders>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  auto result = PrivateQuery<schema::huobi::V1OrderOpenOrders>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                                "/v1/order/openOrders", std::move(params));
   OpenedOrderVector openedOrders;
 
@@ -404,7 +404,7 @@ Deposit::Status DepositStatusFromStatusStr(std::string_view statusStr) {
 
 DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
-  CurlPostData options;
+  HttpPostData options;
   if (depositsConstraints.isCurDefined()) {
     options.emplace_back("currency", ToLower(depositsConstraints.currencyCode().str()));
   }
@@ -412,7 +412,7 @@ DepositsSet HuobiPrivate::queryRecentDeposits(const DepositsConstraints& deposit
   options.emplace_back("type", "deposit");
 
   const auto result = PrivateQuery<schema::huobi::V1QueryDepositWithdraw>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw", std::move(options));
+      _httpClient, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw", std::move(options));
   for (const auto& depositDetail : result.data) {
     Deposit::Status status = DepositStatusFromStatusStr(depositDetail.state);
 
@@ -525,8 +525,8 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr, bool lo
   throw exception("unknown status value '{}'", statusStr);
 }
 
-CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
-  CurlPostData options;
+HttpPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
+  HttpPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.emplace_back("currency", ToLower(withdrawsConstraints.currencyCode().str()));
   }
@@ -539,7 +539,7 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
 WithdrawsSet HuobiPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   Withdraws withdraws;
   const auto result = PrivateQuery<schema::huobi::V1QueryDepositWithdraw>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
+      _httpClient, _apiKey, HttpRequestType::kGet, "/v1/query/deposit-withdraw",
       CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   for (const auto& withdrawDetail : result.data) {
     if (withdrawDetail.currency.size() > CurrencyCode::kMaxLen) {
@@ -575,10 +575,10 @@ int HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
   static constexpr std::string_view kBatchCancelEndpoint = "/v1/order/orders/batchcancel";
   for (const OrderId& orderId : orderIdSet) {
     csvOrderIdValues.append(orderId);
-    csvOrderIdValues.push_back(CurlPostData::kArrayElemSepChar);
+    csvOrderIdValues.push_back(HttpPostData::kArrayElemSepChar);
     static constexpr int kMaxNbOrdersPerRequest = 50;
     if (++nbOrderIdPerRequest == kMaxNbOrdersPerRequest) {
-      PrivateQuery<schema::huobi::V1OrderOrdersBatchCancel>(_curlHandle, _apiKey, HttpRequestType::kPost,
+      PrivateQuery<schema::huobi::V1OrderOrdersBatchCancel>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                             kBatchCancelEndpoint, {{"order-ids", csvOrderIdValues}});
       csvOrderIdValues.clear();
       nbOrderIdPerRequest = 0;
@@ -586,7 +586,7 @@ int HuobiPrivate::batchCancel(const OrdersConstraints::OrderIdSet& orderIdSet) {
   }
 
   if (nbOrderIdPerRequest > 0) {
-    PrivateQuery<schema::huobi::V1OrderOrdersBatchCancel>(_curlHandle, _apiKey, HttpRequestType::kPost,
+    PrivateQuery<schema::huobi::V1OrderOrdersBatchCancel>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                           kBatchCancelEndpoint, {{"order-ids", csvOrderIdValues}});
   }
   return orderIdSet.size();
@@ -626,7 +626,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
 
   volume = sanitizedVol;
 
-  CurlPostData placePostData{{"account-id", _accountIdCache.get()}, {"amount", volume.amountStr()}};
+  HttpPostData placePostData{{"account-id", _accountIdCache.get()}, {"amount", volume.amountStr()}};
   if (isTakerStrategy) {
     if (fromCurrencyCode == mk.quote()) {
       // For buy-market, Huobi asks for the buy value, not the volume. Extract from documentation:
@@ -639,7 +639,7 @@ PlaceOrderInfo HuobiPrivate::placeOrder(MonetaryAmount from, MonetaryAmount volu
   placePostData.emplace_back("symbol", lowerCaseMarket);
   placePostData.emplace_back("type", type);
 
-  auto result = PrivateQuery<schema::huobi::V1OrderOrdersPlace>(_curlHandle, _apiKey, HttpRequestType::kPost,
+  auto result = PrivateQuery<schema::huobi::V1OrderOrdersPlace>(_httpClient, _apiKey, HttpRequestType::kPost,
                                                                 "/v1/order/orders/place", std::move(placePostData));
 
   if (result.data.empty()) {
@@ -660,7 +660,7 @@ void HuobiPrivate::cancelOrderProcess(OrderIdView id) {
   it = std::ranges::copy(id, it).out;
   it = std::ranges::copy(kSubmitCancelSuffix, it).out;
 
-  PrivateQuery<schema::huobi::V1OrderOrdersSubmitCancel>(_curlHandle, _apiKey, HttpRequestType::kPost, endpoint);
+  PrivateQuery<schema::huobi::V1OrderOrdersSubmitCancel>(_httpClient, _apiKey, HttpRequestType::kPost, endpoint);
 }
 
 OrderInfo HuobiPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) {
@@ -677,7 +677,7 @@ OrderInfo HuobiPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext& 
   endpoint.append(orderId);
 
   const auto result =
-      PrivateQuery<schema::huobi::V1OrderOrdersDetail>(_curlHandle, _apiKey, HttpRequestType::kGet, endpoint);
+      PrivateQuery<schema::huobi::V1OrderOrdersDetail>(_httpClient, _apiKey, HttpRequestType::kGet, endpoint);
 
   // Warning: I think Huobi's API has a typo with the 'filled' transformed into 'field' (even documentation is
   // ambiguous on this point). Let's handle both just to be sure.
@@ -716,7 +716,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   HuobiPublic& huobiPublic = dynamic_cast<HuobiPublic&>(_exchangePublic);
 
   const auto resultWithdrawAddress = PrivateQuery<schema::huobi::V1QueryWithdrawAddress>(
-      _curlHandle, _apiKey, HttpRequestType::kGet, "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
+      _httpClient, _apiKey, HttpRequestType::kGet, "/v2/account/withdraw/address", {{"currency", lowerCaseCur}});
   std::string_view huobiWithdrawAddressName;
   for (const auto& withdrawAddress : resultWithdrawAddress.data) {
     if (withdrawAddress.address == destinationWallet.address() &&
@@ -731,7 +731,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 
   log::info("Found stored {} withdraw address '{}'", _exchangePublic.name(), huobiWithdrawAddressName);
 
-  CurlPostData withdrawPostData;
+  HttpPostData withdrawPostData;
   if (destinationWallet.hasTag()) {
     withdrawPostData.emplace_back("addr-tag", destinationWallet.tag());
   }
@@ -761,7 +761,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
   withdrawPostData.emplace_back("fee", withdrawFee.amountStr());
 
   const auto result = PrivateQuery<schema::huobi::V1DwWithdrawApiCreate>(
-      _curlHandle, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create", std::move(withdrawPostData));
+      _httpClient, _apiKey, HttpRequestType::kPost, "/v1/dw/withdraw/api/create", std::move(withdrawPostData));
   if (result.data == 0) {
     throw exception("Unexpected response from withdraw create for {}", huobiPublic.name());
   }
@@ -769,7 +769,7 @@ InitiatedWithdrawInfo HuobiPrivate::launchWithdraw(MonetaryAmount grossAmount, W
 }
 
 int64_t HuobiPrivate::AccountIdFunc::operator()() {
-  const auto result = PrivateQuery<schema::huobi::V1AccountAccounts>(_curlHandle, _apiKey, HttpRequestType::kGet,
+  const auto result = PrivateQuery<schema::huobi::V1AccountAccounts>(_httpClient, _apiKey, HttpRequestType::kGet,
                                                                      "/v1/account/accounts");
   const auto it =
       std::ranges::find_if(result.data, [](const auto& accDetails) { return accDetails.state == "working"; });

@@ -30,9 +30,9 @@
 #include "cct_vector.hpp"
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
@@ -51,7 +51,7 @@
 #include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "read-json.hpp"
 #include "request-retry.hpp"
 #include "runmodes.hpp"
@@ -97,7 +97,7 @@ auto GetStrData(std::string_view endpoint, std::string_view postDataStr) {
   return std::make_pair(std::move(strData), std::move(nonce));
 }
 
-void SetHttpHeaders(CurlOptions& opts, const APIKey& apiKey, const auto& signature, const Nonce& nonce) {
+void SetHttpHeaders(HttpRequestOptions& opts, const APIKey& apiKey, const auto& signature, const Nonce& nonce) {
   static constexpr std::string_view kApiKey = "API-Key";
   static constexpr std::string_view kApiSign = "API-Sign";
   static constexpr std::string_view kApiNonce = "API-Nonce";
@@ -240,9 +240,9 @@ bool CheckOrderErrors(std::string_view endpoint, std::string_view msg, T& data) 
 }
 
 template <class T>
-T PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
-                                 CurlOptions&& opts) {
-  RequestRetry requestRetry(curlHandle, std::move(opts));
+T PrivateQueryProcessWithRetries(HttpClient& httpClient, const APIKey& apiKey, std::string_view endpoint,
+                                 HttpRequestOptions&& opts) {
+  RequestRetry requestRetry(httpClient, std::move(opts));
   return requestRetry.query<T>(
       endpoint,
       [endpoint](T& jsonResponse) {
@@ -269,23 +269,23 @@ T PrivateQueryProcessWithRetries(CurlHandle& curlHandle, const APIKey& apiKey, s
 
         return RequestRetry::Status::kResponseError;
       },
-      [endpoint, &apiKey](CurlOptions& curlOptions) {
-        auto [strData, nonce] = GetStrData(endpoint, curlOptions.postData().str());
+      [endpoint, &apiKey](HttpRequestOptions& requestOptions) {
+        auto [strData, nonce] = GetStrData(endpoint, requestOptions.postData().str());
         auto signature = B64Encode(ssl::Sha512Hex(strData, apiKey.privateKey()));
 
-        SetHttpHeaders(curlOptions, apiKey, signature, nonce);
+        SetHttpHeaders(requestOptions, apiKey, signature, nonce);
       });
 }
 
-template <class T, class CurlPostDataT = CurlPostData>
-T PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view endpoint,
-               CurlPostDataT&& curlPostData = CurlPostData()) {
-  CurlPostData postData(std::forward<CurlPostDataT>(curlPostData));
+template <class T, class HttpPostDataT = HttpPostData>
+T PrivateQuery(HttpClient& httpClient, const APIKey& apiKey, std::string_view endpoint,
+               HttpPostDataT&& httpPostData = HttpPostData()) {
+  HttpPostData postData(std::forward<HttpPostDataT>(httpPostData));
   postData.emplace_front("endpoint", endpoint);
 
-  CurlOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters());
+  HttpRequestOptions opts(HttpRequestType::kPost, postData.urlEncodeExceptDelimiters());
 
-  return PrivateQueryProcessWithRetries<T>(curlHandle, apiKey, endpoint, std::move(opts));
+  return PrivateQueryProcessWithRetries<T>(httpClient, apiKey, endpoint, std::move(opts));
 }
 
 File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
@@ -296,19 +296,19 @@ File GetBithumbCurrencyInfoMapCache(std::string_view dataDir) {
 
 BithumbPrivate::BithumbPrivate(const CoincenterInfo& config, BithumbPublic& bithumbPublic, const APIKey& apiKey)
     : ExchangePrivate(config, bithumbPublic, apiKey),
-      _curlHandle(BithumbPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+      _httpClient(BithumbPublic::kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
                   config.getRunMode()),
       _currencyOrderInfoRefreshTime(exchangeConfig().query.getUpdateFrequency(QueryType::currencyInfo)),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
-          _curlHandle, _apiKey, bithumbPublic) {
+          _httpClient, _apiKey, bithumbPublic) {
   if (config.getRunMode() != settings::RunMode::kQueryResponseOverriden) {
     ReadExactJsonOrThrow(GetBithumbCurrencyInfoMapCache(_coincenterInfo.dataDir()).readAll(), _currencyOrderInfoMap);
   }
 }
 
 bool BithumbPrivate::validateApiKey() {
-  const auto data = PrivateQuery<schema::bithumb::InfoBalance>(_curlHandle, _apiKey, "/info/balance", CurlPostData());
+  const auto data = PrivateQuery<schema::bithumb::InfoBalance>(_httpClient, _apiKey, "/info/balance", HttpPostData());
   if (data.status.empty()) {
     log::error("Unexpected Bithumb reply from balance");
     return false;
@@ -320,7 +320,7 @@ bool BithumbPrivate::validateApiKey() {
 
 BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   const auto result =
-      PrivateQuery<schema::bithumb::InfoBalance>(_curlHandle, _apiKey, "/info/balance", {{"currency", "all"}});
+      PrivateQuery<schema::bithumb::InfoBalance>(_httpClient, _apiKey, "/info/balance", {{"currency", "all"}});
 
   BalancePortfolio balancePortfolio;
 
@@ -345,7 +345,7 @@ BalancePortfolio BithumbPrivate::queryAccountBalance(const BalanceOptions& balan
 }
 
 Wallet BithumbPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
-  const auto ret = PrivateQuery<schema::bithumb::InfoWalletAddress>(_curlHandle, _apiKey, kWalletAddressEndpointStr,
+  const auto ret = PrivateQuery<schema::bithumb::InfoWalletAddress>(_httpClient, _apiKey, kWalletAddressEndpointStr,
                                                                     {{"currency", currencyCode.str()}});
   std::string_view addressAndTag = ret.data.wallet_address;
   if (addressAndTag.empty()) {
@@ -397,8 +397,8 @@ TimePoint RetrieveTimePointFromTrxJson(const std::variant<string, int64_t>& date
 }
 
 auto FillOrderCurrencies(const OrdersConstraints& ordersConstraints, ExchangePublic& exchangePublic,
-                         CurlHandle& curlHandle, const APIKey& apiKey, std::string_view prefixKeyBalance,
-                         CurlPostData& params) {
+                         HttpClient& httpClient, const APIKey& apiKey, std::string_view prefixKeyBalance,
+                         HttpPostData& params) {
   SmallVector<CurrencyCode, 1> orderCurrencies;
 
   if (ordersConstraints.isCurDefined()) {
@@ -417,7 +417,7 @@ auto FillOrderCurrencies(const OrdersConstraints& ordersConstraints, ExchangePub
     // by looking at "is_use" amounts to retrieve opened orders or "available" amounts to retrieve closed orders.
     // The only drawback is that we need to make one query for each currency, but it's better than nothing.
     const auto balance =
-        PrivateQuery<schema::bithumb::InfoBalance>(curlHandle, apiKey, "/info/balance", {{"currency", "all"}});
+        PrivateQuery<schema::bithumb::InfoBalance>(httpClient, apiKey, "/info/balance", {{"currency", "all"}});
     for (const auto& [key, value] : balance.data) {
       if (key.starts_with(prefixKeyBalance)) {
         CurrencyCode cur(std::string_view(key.begin() + prefixKeyBalance.size(), key.end()));
@@ -432,17 +432,17 @@ auto FillOrderCurrencies(const OrdersConstraints& ordersConstraints, ExchangePub
 
 template <class OrderVectorType>
 OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, ExchangePublic& exchangePublic,
-                            CurlHandle& curlHandle, const APIKey& apiKey) {
+                            HttpClient& httpClient, const APIKey& apiKey) {
   static constexpr int kNbOrdersMaxPerQuery = 1000;
 
-  CurlPostData params{{"count", kNbOrdersMaxPerQuery}};
+  HttpPostData params{{"count", kNbOrdersMaxPerQuery}};
 
   using OrderType = std::remove_cvref_t<decltype(*std::declval<OrderVectorType>().begin())>;
 
   static constexpr std::string_view kPrefixKey = std::is_same_v<OrderType, ClosedOrder> ? "available_" : "in_use_";
 
   const auto orderCurrencies =
-      FillOrderCurrencies(ordersConstraints, exchangePublic, curlHandle, apiKey, kPrefixKey, params);
+      FillOrderCurrencies(ordersConstraints, exchangePublic, httpClient, apiKey, kPrefixKey, params);
 
   OrderVectorType orders;
   if (ordersConstraints.isPlacedTimeAfterDefined()) {
@@ -459,7 +459,7 @@ OrderVectorType QueryOrders(const OrdersConstraints& ordersConstraints, Exchange
   for (CurrencyCode volumeCur : orderCurrencies) {
     params.set(kOrderCurrencyParamStr, volumeCur.str());
 
-    auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(curlHandle, apiKey, "/info/orders", params);
+    auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(httpClient, apiKey, "/info/orders", params);
 
     for (auto& orderDetails : ordersReply.data) {
       TimePoint placedTime = RetrieveTimePointFromTrxJson(orderDetails.order_date);
@@ -573,7 +573,7 @@ enum class UserTransactionEnum : int8_t {
 };
 
 template <class ConstraintsType>
-auto QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHandle, const APIKey& apiKey,
+auto QueryUserTransactions(BithumbPrivate& exchangePrivate, HttpClient& httpClient, const APIKey& apiKey,
                            const ConstraintsType& constraints, UserTransactionEnum userTransactionEnum) {
   SmallVector<CurrencyCode, 1> orderCurrencies;
 
@@ -589,7 +589,7 @@ auto QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
     }
   }
 
-  CurlPostData options{{"count", 50}};
+  HttpPostData options{{"count", 50}};
 
   if (userTransactionEnum == UserTransactionEnum::kClosedOrders) {
     if constexpr (std::is_same_v<ConstraintsType, OrdersConstraints>) {
@@ -649,7 +649,7 @@ auto QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
     for (int searchGb : searchGbsVector) {
       options.set("searchGb", searchGb);
       auto userTransactionsReply =
-          PrivateQuery<schema::bithumb::UserTransactions>(curlHandle, apiKey, "/info/user_transactions", options);
+          PrivateQuery<schema::bithumb::UserTransactions>(httpClient, apiKey, "/info/user_transactions", options);
 
       for (auto& trx : userTransactionsReply.data) {
         if (!constraints.validateCur(trx.order_currency)) {
@@ -687,10 +687,10 @@ auto QueryUserTransactions(BithumbPrivate& exchangePrivate, CurlHandle& curlHand
 }  // namespace
 
 ClosedOrderVector BithumbPrivate::queryClosedOrders(const OrdersConstraints& closedOrdersConstraints) {
-  auto closedOrders = QueryOrders<ClosedOrderVector>(closedOrdersConstraints, _exchangePublic, _curlHandle, _apiKey);
+  auto closedOrders = QueryOrders<ClosedOrderVector>(closedOrdersConstraints, _exchangePublic, _httpClient, _apiKey);
 
   const auto orderTransactionsJson =
-      QueryUserTransactions(*this, _curlHandle, _apiKey, closedOrdersConstraints, UserTransactionEnum::kClosedOrders);
+      QueryUserTransactions(*this, _httpClient, _apiKey, closedOrdersConstraints, UserTransactionEnum::kClosedOrders);
 
   closedOrders.reserve(closedOrders.size() + orderTransactionsJson.size());
   for (const schema::bithumb::UserTransactions::UserTransaction& trx : orderTransactionsJson) {
@@ -712,7 +712,7 @@ ClosedOrderVector BithumbPrivate::queryClosedOrders(const OrdersConstraints& clo
 }
 
 OpenedOrderVector BithumbPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
-  return QueryOrders<OpenedOrderVector>(openedOrdersConstraints, _exchangePublic, _curlHandle, _apiKey);
+  return QueryOrders<OpenedOrderVector>(openedOrdersConstraints, _exchangePublic, _httpClient, _apiKey);
 }
 
 int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
@@ -728,7 +728,7 @@ int BithumbPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersCons
 DepositsSet BithumbPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
 
-  auto txrList = QueryUserTransactions(*this, _curlHandle, _apiKey, depositsConstraints, UserTransactionEnum::kDeposit);
+  auto txrList = QueryUserTransactions(*this, _httpClient, _apiKey, depositsConstraints, UserTransactionEnum::kDeposit);
   deposits.reserve(txrList.size());
   for (const schema::bithumb::UserTransactions::UserTransaction& trx : txrList) {
     const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx.transfer_date);
@@ -747,7 +747,7 @@ WithdrawsSet BithumbPrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
   Withdraws withdraws;
 
   auto txrList =
-      QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawsConstraints, UserTransactionEnum::kAllWithdraws);
+      QueryUserTransactions(*this, _httpClient, _apiKey, withdrawsConstraints, UserTransactionEnum::kAllWithdraws);
   withdraws.reserve(txrList.size());
   for (const schema::bithumb::UserTransactions::UserTransaction& trx : txrList) {
     const TimePoint timestamp = RetrieveTimePointFromTrxJson(trx.transfer_date);
@@ -774,7 +774,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   const Market mk = tradeInfo.tradeContext.market;
 
   // It seems Bithumb uses "standard" currency codes, no need to translate them
-  CurlPostData placePostData{{kOrderCurrencyParamStr, mk.base().str()}, {kPaymentCurParamStr, mk.quote().str()}};
+  HttpPostData placePostData{{kOrderCurrencyParamStr, mk.base().str()}, {kPaymentCurParamStr, mk.quote().str()}};
   const std::string_view orderType = fromCurrencyCode == mk.base() ? "ask" : "bid";
 
   string endpoint("/trade/");
@@ -865,7 +865,7 @@ PlaceOrderInfo BithumbPrivate::placeOrder(MonetaryAmount /*from*/, MonetaryAmoun
   static constexpr int kNbMaxRetries = 3;
   bool currencyInfoUpdated = false;
   for (int nbRetries = 0; nbRetries < kNbMaxRetries; ++nbRetries) {
-    auto tradeReply = PrivateQuery<schema::bithumb::Trade>(_curlHandle, _apiKey, endpoint, placePostData);
+    auto tradeReply = PrivateQuery<schema::bithumb::Trade>(_httpClient, _apiKey, endpoint, placePostData);
     if (!tradeReply.order_id.empty()) {
       placeOrderInfo.orderId = std::move(tradeReply.order_id);
       placeOrderInfo.orderInfo = queryOrderInfo(placeOrderInfo.orderId, tradeInfo.tradeContext);
@@ -930,8 +930,8 @@ OrderInfo BithumbPrivate::cancelOrder(OrderIdView orderId, const TradeContext& t
 }
 
 namespace {
-CurlPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
-  CurlPostData ret;
+HttpPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
+  HttpPostData ret;
 
   auto baseStr = mk.base().str();
   auto quoteStr = mk.quote().str();
@@ -949,7 +949,7 @@ CurlPostData OrderInfoPostData(Market mk, TradeSide side, OrderIdView orderId) {
 }  // namespace
 
 void BithumbPrivate::cancelOrderProcess(OrderIdView orderId, const TradeContext& tradeContext) {
-  PrivateQuery<schema::bithumb::TradeCancel>(_curlHandle, _apiKey, "/trade/cancel",
+  PrivateQuery<schema::bithumb::TradeCancel>(_httpClient, _apiKey, "/trade/cancel",
                                              OrderInfoPostData(tradeContext.market, tradeContext.side, orderId));
 }
 
@@ -958,8 +958,8 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
   const CurrencyCode fromCurrencyCode = tradeContext.fromCur();
   const CurrencyCode toCurrencyCode = tradeContext.toCur();
 
-  CurlPostData postData = OrderInfoPostData(mk, tradeContext.side, orderId);
-  auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(_curlHandle, _apiKey, "/info/orders", postData);
+  HttpPostData postData = OrderInfoPostData(mk, tradeContext.side, orderId);
+  auto ordersReply = PrivateQuery<schema::bithumb::InfoOrders>(_httpClient, _apiKey, "/info/orders", postData);
 
   const bool isClosed = ordersReply.data.empty() || ordersReply.data.front().order_id != orderId;
   OrderInfo orderInfo{TradedAmounts(fromCurrencyCode, toCurrencyCode), isClosed};
@@ -969,7 +969,7 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
 
   postData.erase(kTypeParamStr);
   auto infoOrderDetailReply =
-      PrivateQuery<schema::bithumb::InfoOrderDetail>(_curlHandle, _apiKey, "/info/order_detail", std::move(postData));
+      PrivateQuery<schema::bithumb::InfoOrderDetail>(_httpClient, _apiKey, "/info/order_detail", std::move(postData));
 
   for (const auto& contractDetail : infoOrderDetailReply.data.contract) {
     // always in base currency
@@ -993,10 +993,10 @@ OrderInfo BithumbPrivate::queryOrderInfo(OrderIdView orderId, const TradeContext
 
 namespace {
 
-CurlPostData ComputeLaunchWithdrawCurlPostData(MonetaryAmount netEmittedAmount, const Wallet& destinationWallet) {
+HttpPostData ComputeLaunchWithdrawHttpPostData(MonetaryAmount netEmittedAmount, const Wallet& destinationWallet) {
   const CurrencyCode currencyCode = netEmittedAmount.currencyCode();
   const AccountOwner& desAccountOwner = destinationWallet.accountOwner();
-  CurlPostData withdrawPostData{
+  HttpPostData withdrawPostData{
       {"units", netEmittedAmount.amountStr()},
       {"currency", currencyCode.str()},
       {"address", destinationWallet.address()},
@@ -1043,12 +1043,12 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
   };
 
   auto oldWithdraws =
-      QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
+      QueryUserTransactions(*this, _httpClient, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
   std::ranges::sort(oldWithdraws, compareTrxByDate);
 
   // Actually launch the withdraw
-  PrivateQuery<schema::bithumb::BtcWithdrawal>(_curlHandle, _apiKey, "/trade/btc_withdrawal",
-                                               ComputeLaunchWithdrawCurlPostData(netEmittedAmount, destinationWallet));
+  PrivateQuery<schema::bithumb::BtcWithdrawal>(_httpClient, _apiKey, "/trade/btc_withdrawal",
+                                               ComputeLaunchWithdrawHttpPostData(netEmittedAmount, destinationWallet));
 
   // Query the withdraws, hopefully we will be able to find our withdraw
   std::optional<schema::bithumb::UserTransactions::UserTransaction> newWithdrawTrx;
@@ -1062,7 +1062,7 @@ InitiatedWithdrawInfo BithumbPrivate::launchWithdraw(MonetaryAmount grossAmount,
       sleepingTime = (3 * sleepingTime) / 2;
     }
     auto currentWithdraws =
-        QueryUserTransactions(*this, _curlHandle, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
+        QueryUserTransactions(*this, _httpClient, _apiKey, withdrawConstraints, UserTransactionEnum::kOngoingWithdraws);
     std::ranges::sort(currentWithdraws, compareTrxByDate);
 
     // Isolate the new withdraws since the launch of our new withdraw

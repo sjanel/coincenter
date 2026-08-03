@@ -10,9 +10,9 @@
 #include "besturlpicker.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "permanentcurloptions.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "reader.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
@@ -44,14 +44,14 @@ class DummyThirdPartyReader : public Reader {
 };
 }  // namespace
 
-CurlHandle::CurlHandle([[maybe_unused]] BestURLPicker bestURLPicker,
+HttpClient::HttpClient([[maybe_unused]] BestURLPicker bestURLPicker,
                        [[maybe_unused]] AbstractMetricGateway *pMetricGateway,
-                       [[maybe_unused]] const PermanentCurlOptions &permanentCurlOptions,
+                       [[maybe_unused]] const PermanentRequestOptions &permanentHttpRequestOptions,
                        [[maybe_unused]] settings::RunMode runMode)
     : _bestURLPicker(kSomeFakeURL) {}
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, const CurlOptions &opts) {
+std::string_view HttpClient::query([[maybe_unused]] std::string_view endpoint, const HttpRequestOptions &opts) {
   // Rates
   std::string_view marketStr = opts.postData().get("q");
   if (!marketStr.empty()) {
@@ -104,7 +104,7 @@ std::string_view CurlHandle::query([[maybe_unused]] std::string_view endpoint, c
   return _queryData;
 }
 
-CurlHandle::~CurlHandle() = default;  // NOLINT
+HttpClient::~HttpClient() = default;  // NOLINT
 
 class FiatConverterTest : public ::testing::Test {
  protected:

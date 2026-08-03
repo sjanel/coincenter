@@ -3,7 +3,7 @@
 #include <array>
 
 #include "abstractmetricgateway.hpp"
-#include "curlmetrics.hpp"
+#include "httpmetrics.hpp"
 #include "currencycode.hpp"
 #include "enum-string.hpp"
 #include "exchange.hpp"
@@ -153,7 +153,7 @@ void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange &lastTrade
 }
 
 void MetricsExporter::createSummariesAndHistograms() {
-  for (const auto &[requestType, metricKey] : CurlMetrics::kRequestDurationKeys) {
+  for (const auto &[requestType, metricKey] : HttpMetrics::kRequestDurationKeys) {
     static constexpr std::array kRequestDurationBoundariesMs = {5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0};
     _pMetricsGateway->createHistogram(metricKey, kRequestDurationBoundariesMs);
   }

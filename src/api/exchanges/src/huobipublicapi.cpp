@@ -13,14 +13,13 @@
 
 #include "apiquerytypeenum.hpp"
 #include "cachedresult.hpp"
-#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currency-chain-picker.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -39,9 +38,7 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
-#include "permanentcurloptions.hpp"
 #include "public-trade-vector.hpp"
-#include "read-json.hpp"
 #include "request-retry.hpp"
 #include "timedef.hpp"
 #include "toupperlower-string.hpp"
@@ -51,17 +48,15 @@
 namespace cct::api {
 namespace {
 
-constexpr std::string_view kHealthCheckBaseUrl[] = {"https://status.huobigroup.com"};
-
 template <class T>
-T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostData& curlPostData = CurlPostData()) {
+T PublicQuery(HttpClient& httpClient, std::string_view endpoint, const HttpPostData& httpPostData = HttpPostData()) {
   string method(endpoint);
-  if (!curlPostData.empty()) {
+  if (!httpPostData.empty()) {
     method.push_back('?');
-    method.append(curlPostData.str());
+    method.append(httpPostData.str());
   }
 
-  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
+  RequestRetry requestRetry(httpClient, HttpRequestOptions(HttpRequestType::kGet));
   return requestRetry.query<T>(method, [](const T& response) {
     if constexpr (amc::is_detected<schema::huobi::has_code_t, T>::value) {
       if (response.code != 200) {
@@ -88,48 +83,40 @@ T PublicQuery(CurlHandle& curlHandle, std::string_view endpoint, const CurlPostD
 
 HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::huobi, fiatConverter, commonAPI, config),
-      _curlHandle(kURLBases, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
-      _healthCheckCurlHandle(kHealthCheckBaseUrl, config.metricGatewayPtr(),
-                             PermanentCurlOptions::Builder()
-                                 .setMinDurationBetweenQueries(exchangeConfig().query.publicAPIRate.duration)
-                                 .build(),
-                             config.getRunMode()),
+      _httpClient(kURLBases, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
-          _curlHandle),
+          _httpClient),
       _marketsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
-          _curlHandle, exchangeConfig().asset),
+          _httpClient, exchangeConfig().asset),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
-          _marketsCache, _curlHandle),
+          _marketsCache, _httpClient),
       _orderbookCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
-          _curlHandle),
+          _httpClient),
       _tradedVolumeCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume), _cachedResultVault),
-          _curlHandle),
+          _httpClient),
       _tickerCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice), _cachedResultVault),
-          _curlHandle) {}
+          _httpClient) {}
 
 bool HuobiPublic::healthCheck() {
-  auto strData = _healthCheckCurlHandle.query("/api/v2/summary.json", CurlOptions(HttpRequestType::kGet));
-  schema::huobi::V2SystemStatus networkInfo;
-  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = ReadJson<json::opts{.error_on_unknown_keys = false, .minified = true, .raw_string = true}>(
-      strData, "Huobi system status", networkInfo);
-  if (ec) {
-    log::error("{} health check response is badly formatted", name());
-    return false;
-  }
-  std::string_view statusStr = networkInfo.status.description;
-  log::info("{} status: {}", name(), statusStr);
-  return networkInfo.incidents.empty();
+  static constexpr std::string_view kMarketStatusNames[] = {"unknown", "normal", "halted", "cancel-only"};
+
+  const auto marketStatus =
+      PublicQuery<schema::huobi::V2MarketStatus>(_httpClient, "/v2/market-status").data.marketStatus;
+  const auto statusIdx = marketStatus > 0 && std::cmp_less(marketStatus, std::size(kMarketStatusNames))
+                             ? static_cast<std::size_t>(marketStatus)
+                             : std::size_t{};
+  log::info("{} status: {}", name(), kMarketStatusNames[statusIdx]);
+  return marketStatus == 1;
 }
 
 schema::huobi::V2ReferenceCurrency HuobiPublic::TradableCurrenciesFunc::operator()() {
-  return PublicQuery<schema::huobi::V2ReferenceCurrency>(_curlHandle, "/v2/reference/currencies");
+  return PublicQuery<schema::huobi::V2ReferenceCurrency>(_httpClient, "/v2/reference/currencies");
 }
 
 namespace {
@@ -139,6 +126,18 @@ CurrencyChainPicker<schema::huobi::V2ReferenceCurrencyDetails::Chain> CreateCurr
             return chain.displayName;
           }};
 }
+
+// Huobi occasionally lists junk currencies whose acronym cannot fit in a CurrencyCode (for instance
+// non-ASCII names, or names longer than CurrencyCode::kMaxLen). Constructing a CurrencyCode from such
+// a string throws, so validate first and skip the entry instead of aborting the whole parsing.
+std::optional<CurrencyCode> StandardizeCurrencyCodeIfValid(const CoincenterInfo& coincenterInfo,
+                                                           std::string_view curStr) {
+  if (!CurrencyCode::IsValid(curStr)) {
+    log::debug("Discard Huobi currency '{}' as it is not a valid currency code", curStr);
+    return std::nullopt;
+  }
+  return coincenterInfo.standardizeCurrencyCode(curStr);
+}
 }  // namespace
 
 HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
@@ -146,7 +145,8 @@ HuobiPublic::WithdrawParams HuobiPublic::getWithdrawParams(CurrencyCode cur) {
   const auto& assetConfig = _coincenterInfo.exchangeConfig(exchangeNameEnum()).asset;
   const auto currencyChainPicker = CreateCurrencyChainPicker(assetConfig);
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
-    if (cur == CurrencyCode(_coincenterInfo.standardizeCurrencyCode(curDetail.currency))) {
+    const auto optCur = StandardizeCurrencyCodeIfValid(_coincenterInfo, curDetail.currency);
+    if (optCur == cur) {
       for (const auto& chainDetail : curDetail.chains) {
         if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
           continue;
@@ -176,8 +176,12 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
       log::debug("{} is {} from Huobi", curStr, statusStr);
       continue;
     }
+    const auto optCur = StandardizeCurrencyCodeIfValid(_coincenterInfo, curStr);
+    if (!optCur) {
+      continue;
+    }
     bool foundChainWithSameName = false;
-    CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
+    const CurrencyCode cur = *optCur;
     for (const auto& chainDetail : curDetail.chains) {
       if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
         continue;
@@ -208,7 +212,7 @@ CurrencyExchangeFlatSet HuobiPublic::queryTradableCurrencies() {
 
 std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::MarketsFunc::operator()() {
   auto result =
-      PublicQuery<schema::huobi::V1SettingsCommonMarketSymbols>(_curlHandle, "/v1/settings/common/market-symbols");
+      PublicQuery<schema::huobi::V1SettingsCommonMarketSymbols>(_httpClient, "/v1/settings/common/market-symbols");
 
   MarketSet markets;
   MarketInfoMap marketInfoMap;
@@ -220,6 +224,13 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
   for (const auto& symbol : result.data) {
     std::string_view baseAsset = symbol.bc;
     std::string_view quoteAsset = symbol.qc;
+    // Validate the acronyms before any CurrencyCode is built from them (including the implicit
+    // conversions done by excludedCurrencies.contains below): Huobi may list junk symbols whose
+    // asset codes do not fit in a CurrencyCode, and constructing one from them would throw.
+    if (!CurrencyCode::IsValid(baseAsset) || !CurrencyCode::IsValid(quoteAsset)) {
+      log::trace("Discard {}-{} as one asset is not a valid currency code", baseAsset, quoteAsset);
+      continue;
+    }
     if (excludedCurrencies.contains(baseAsset) || excludedCurrencies.contains(quoteAsset)) {
       log::trace("Discard {}-{} excluded by config", baseAsset, quoteAsset);
       continue;
@@ -231,10 +242,6 @@ std::pair<MarketSet, HuobiPublic::MarketsFunc::MarketInfoMap> HuobiPublic::Marke
     std::string_view stateStr = symbol.state;
     if (stateStr != "online") {  // Possible values are [online，pre-online,offline,suspend]
       log::trace("Trading is {} for market {}-{}", stateStr, baseAsset, quoteAsset);
-      continue;
-    }
-    if (baseAsset.size() > CurrencyCode::kMaxLen || quoteAsset.size() > CurrencyCode::kMaxLen) {
-      log::trace("Discard {}-{} as one asset is too long", baseAsset, quoteAsset);
       continue;
     }
     log::trace("Accept {}-{} Huobi asset pair", baseAsset, quoteAsset);
@@ -273,7 +280,11 @@ MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
   const auto currencyChainPicker = CreateCurrencyChainPicker(assetConfig);
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
     std::string_view curStr = curDetail.currency;
-    CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
+    const auto optCur = StandardizeCurrencyCodeIfValid(_coincenterInfo, curStr);
+    if (!optCur) {
+      continue;
+    }
+    const CurrencyCode cur = *optCur;
     bool foundChainWithSameName = false;
     for (const auto& chainDetail : curDetail.chains) {
       if (currencyChainPicker.shouldDiscardChain(curDetail.chains, cur, chainDetail)) {
@@ -308,10 +319,11 @@ MonetaryAmountByCurrencySet HuobiPublic::queryWithdrawalFees() {
 std::optional<MonetaryAmount> HuobiPublic::queryWithdrawalFee(CurrencyCode currencyCode) {
   for (const auto& curDetail : _tradableCurrenciesCache.get().data) {
     std::string_view curStr = curDetail.currency;
-    CurrencyCode cur(_coincenterInfo.standardizeCurrencyCode(curStr));
-    if (cur != currencyCode) {
+    const auto optCur = StandardizeCurrencyCodeIfValid(_coincenterInfo, curStr);
+    if (optCur != currencyCode) {
       continue;
     }
+    const CurrencyCode cur = *optCur;
     for (const auto& chainDetail : curDetail.chains) {
       std::string_view chainName = chainDetail.chain;
       if (chainName == cur) {
@@ -331,7 +343,7 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
   for (Market mk : markets) {
     huobiAssetPairToStdMarketMap.insert_or_assign(mk.assetsPairStrUpper(), mk);
   }
-  const auto tickerData = PublicQuery<schema::huobi::MarketTickers>(_curlHandle, "/market/tickers");
+  const auto tickerData = PublicQuery<schema::huobi::MarketTickers>(_httpClient, "/market/tickers");
   const auto time = Clock::now();
   for (const auto& tickerDetails : tickerData.data) {
     string upperMarket = ToUpper(tickerDetails.symbol);
@@ -365,7 +377,7 @@ MarketOrderBookMap HuobiPublic::AllOrderBooksFunc::operator()(int depth) {
 
 MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
   // Huobi has a fixed range of authorized values for depth
-  CurlPostData postData{{"symbol", mk.assetsPairStrLower()}, {"type", "step0"}};
+  HttpPostData postData{{"symbol", mk.assetsPairStrLower()}, {"type", "step0"}};
   if (depth != kHuobiStandardOrderBookDefaultDepth) {
     static constexpr std::array kAuthorizedDepths = {5, 10, 20, kHuobiStandardOrderBookDefaultDepth};
     const auto lb = std::ranges::lower_bound(kAuthorizedDepths, depth);
@@ -378,7 +390,7 @@ MarketOrderBook HuobiPublic::OrderBookFunc::operator()(Market mk, int depth) {
 
   MarketOrderBookLines orderBookLines;
 
-  const auto ticks = PublicQuery<schema::huobi::MarketDepth>(_curlHandle, "/market/depth", postData);
+  const auto ticks = PublicQuery<schema::huobi::MarketDepth>(_httpClient, "/market/depth", postData);
   const auto nowTime = Clock::now();
 
   orderBookLines.reserve(std::min(static_cast<decltype(depth)>(ticks.tick.asks.size()), depth) +
@@ -449,7 +461,7 @@ MonetaryAmount HuobiPublic::sanitizeVolume(Market mk, CurrencyCode fromCurrencyC
 }
 
 MonetaryAmount HuobiPublic::TradedVolumeFunc::operator()(Market mk) {
-  const auto result = PublicQuery<schema::huobi::MarketDetailMerged>(_curlHandle, "/market/detail/merged",
+  const auto result = PublicQuery<schema::huobi::MarketDetailMerged>(_httpClient, "/market/detail/merged",
                                                                      {{"symbol", mk.assetsPairStrLower()}});
   return MonetaryAmount(result.tick.amount, mk.base());
 }
@@ -467,7 +479,7 @@ PublicTradeVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
   }
 
   auto result = PublicQuery<schema::huobi::MarketHistoryTrade>(
-      _curlHandle, "/market/history/trade", {{"symbol", mk.assetsPairStrLower()}, {"size", nbTrades}});
+      _httpClient, "/market/history/trade", {{"symbol", mk.assetsPairStrLower()}, {"size", nbTrades}});
 
   PublicTradeVector ret;
   ret.reserve(nbTrades);
@@ -497,7 +509,7 @@ PublicTradeVector HuobiPublic::queryLastTrades(Market mk, int nbTrades) {
 
 MonetaryAmount HuobiPublic::TickerFunc::operator()(Market mk) {
   const auto result =
-      PublicQuery<schema::huobi::MarketTrade>(_curlHandle, "/market/trade", {{"symbol", mk.assetsPairStrLower()}});
+      PublicQuery<schema::huobi::MarketTrade>(_httpClient, "/market/trade", {{"symbol", mk.assetsPairStrLower()}});
   double lastPrice = result.tick.data.empty() ? 0 : result.tick.data.front().price;
   return MonetaryAmount(lastPrice, mk.quote());
 }

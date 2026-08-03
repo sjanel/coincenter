@@ -26,7 +26,7 @@ TEST(CoincenterOptionsTest, PrintVersion) {
   std::ostringstream os;
   CoincenterCmdLineOptions::PrintVersion("test", os);
   EXPECT_TRUE(os.view().starts_with("test"));
-  EXPECT_NE(os.view().find("curl"), std::string_view::npos);
+  EXPECT_NE(os.view().find("aeronet"), std::string_view::npos);
   EXPECT_NE(os.view().find("OpenSSL"), std::string_view::npos);
 }
 

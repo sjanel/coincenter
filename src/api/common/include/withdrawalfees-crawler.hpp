@@ -6,7 +6,7 @@
 #include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
 #include "cachedresultvault.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "exchange-name-enum.hpp"
 #include "monetaryamount.hpp"
@@ -44,8 +44,7 @@ class WithdrawalFeesCrawler : public CacheFileUpdatorInterface {
     WithdrawalInfoMaps get1(ExchangeNameEnum exchangeNameEnum);
     WithdrawalInfoMaps get2(ExchangeNameEnum exchangeNameEnum);
 
-    CurlHandle _curlHandle1;
-    CurlHandle _curlHandle2;
+    HttpClient _httpClient;
   };
 
   const CoincenterInfo& _coincenterInfo;

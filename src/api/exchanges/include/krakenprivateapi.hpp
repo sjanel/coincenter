@@ -2,7 +2,7 @@
 
 #include "cachedresult.hpp"
 #include "cct_string.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "kraken-schema.hpp"
@@ -59,7 +59,7 @@ class KrakenPrivate : public ExchangePrivate {
   struct DepositWalletFunc {
     Wallet operator()(CurrencyCode currencyCode);
 
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const APIKey& _apiKey;
     KrakenPublic& _exchangePublic;
   };
@@ -70,7 +70,7 @@ class KrakenPrivate : public ExchangePrivate {
 
   void cancelOrderProcess(OrderIdView orderId);
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CachedResult<DepositWalletFunc, CurrencyCode> _depositWalletsCache;
 };
 }  // namespace api

@@ -23,9 +23,9 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -40,7 +40,7 @@
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "order-book-line.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "request-retry.hpp"
 #include "timedef.hpp"
@@ -51,13 +51,13 @@ namespace cct::api {
 namespace {
 
 template <class T>
-T PublicQuery(CurlHandle& curlHandle, std::string_view method, const CurlPostData& curlPostData = CurlPostData()) {
+T PublicQuery(HttpClient& httpClient, std::string_view method, const HttpPostData& httpPostData = HttpPostData()) {
   string endpoint(method);
-  if (!curlPostData.empty()) {
+  if (!httpPostData.empty()) {
     endpoint.push_back('?');
-    endpoint.append(curlPostData.str());
+    endpoint.append(httpPostData.str());
   }
-  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet));
+  RequestRetry requestRetry(httpClient, HttpRequestOptions(HttpRequestType::kGet));
   return requestRetry.query<T>(endpoint, [](const T& response) {
     if constexpr (amc::is_detected<schema::binance::has_code_t, T>::value &&
                   amc::is_detected<schema::binance::has_msg_t, T>::value) {
@@ -89,15 +89,15 @@ VolAndPriNbDecimals QueryVolAndPriNbDecimals(const auto& exchangeInfoData, Marke
 BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter& fiatConverter,
                              api::CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::binance, fiatConverter, commonAPI, coincenterInfo),
-      _curlHandle(kURLBases, coincenterInfo.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+      _httpClient(kURLBases, coincenterInfo.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
                   coincenterInfo.getRunMode()),
-      _commonInfo(exchangeConfig().asset, _curlHandle),
+      _commonInfo(exchangeConfig().asset, _httpClient),
       _exchangeConfigCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _commonInfo),
       _marketsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
-          _exchangeConfigCache, _commonInfo._curlHandle, _commonInfo._assetConfig),
+          _exchangeConfigCache, _commonInfo._httpClient, _commonInfo._assetConfig),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
           _exchangeConfigCache, _marketsCache, _commonInfo),
@@ -112,7 +112,7 @@ BinancePublic::BinancePublic(const CoincenterInfo& coincenterInfo, FiatConverter
           _commonInfo) {}
 
 bool BinancePublic::healthCheck() {
-  auto result = _commonInfo._curlHandle.query("/api/v3/ping", CurlOptions(HttpRequestType::kGet));
+  auto result = _commonInfo._httpClient.query("/api/v3/ping", HttpRequestOptions(HttpRequestType::kGet));
   return result == "{}";
 }
 
@@ -152,7 +152,7 @@ MarketSet BinancePublic::MarketsFunc::operator()() {
 
 BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::ExchangeInfoFunc::operator()() {
   ExchangeInfoDataByMarket ret;
-  auto data = PublicQuery<schema::binance::V3ExchangeInfo>(_commonInfo._curlHandle, "/api/v3/exchangeInfo");
+  auto data = PublicQuery<schema::binance::V3ExchangeInfo>(_commonInfo._httpClient, "/api/v3/exchangeInfo");
   for (auto& symbol : data.symbols) {
     if (symbol.status != "TRADING") {
       log::trace("Discard {}-{} as not trading status {}", symbol.baseAsset, symbol.quoteAsset, symbol.status);
@@ -224,7 +224,7 @@ MonetaryAmount BinancePublic::computePriceForNotional(Market mk, int avgPriceMin
     log::error("Unable to retrieve last trades from {}, use average price instead for notional", mk);
   }
 
-  const auto result = PublicQuery<schema::binance::V3AvgPrice>(_commonInfo._curlHandle, "/api/v3/avgPrice",
+  const auto result = PublicQuery<schema::binance::V3AvgPrice>(_commonInfo._httpClient, "/api/v3/avgPrice",
                                                                {{"symbol", mk.assetsPairStrUpper()}});
 
   return {result.price, mk.quote()};
@@ -344,7 +344,7 @@ MonetaryAmount BinancePublic::sanitizeVolume(Market mk, MonetaryAmount vol, Mone
 MarketOrderBookMap BinancePublic::AllOrderBooksFunc::operator()(int depth) {
   MarketOrderBookMap ret;
   const MarketSet& markets = _marketsCache.get();
-  auto result = PublicQuery<schema::binance::V3TickerBookTicker>(_commonInfo._curlHandle, "/api/v3/ticker/bookTicker");
+  auto result = PublicQuery<schema::binance::V3TickerBookTicker>(_commonInfo._httpClient, "/api/v3/ticker/bookTicker");
   using BinanceAssetPairToStdMarketMap = std::unordered_map<string, Market>;
   BinanceAssetPairToStdMarketMap binanceAssetPairToStdMarketMap;
   binanceAssetPairToStdMarketMap.reserve(markets.size());
@@ -382,9 +382,9 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
 
   MarketOrderBookLines orderBookLines;
 
-  const CurlPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
+  const HttpPostData postData{{"symbol", mk.assetsPairStrUpper()}, {"limit", *lb}};
   const auto asksAndBids =
-      PublicQuery<schema::binance::V3OrderBook>(_commonInfo._curlHandle, "/api/v3/depth", postData);
+      PublicQuery<schema::binance::V3OrderBook>(_commonInfo._httpClient, "/api/v3/depth", postData);
   const auto nowTime = Clock::now();
 
   orderBookLines.reserve(std::min(static_cast<decltype(depth)>(asksAndBids.asks.size()), depth) +
@@ -404,7 +404,7 @@ MarketOrderBook BinancePublic::OrderBookFunc::operator()(Market mk, int depth) {
 }
 
 MonetaryAmount BinancePublic::TradedVolumeFunc::operator()(Market mk) {
-  const auto result = PublicQuery<schema::binance::V3Ticker24hr>(_commonInfo._curlHandle, "/api/v3/ticker/24hr",
+  const auto result = PublicQuery<schema::binance::V3Ticker24hr>(_commonInfo._httpClient, "/api/v3/ticker/24hr",
                                                                  {{"symbol", mk.assetsPairStrUpper()}});
 
   return {result.volume, mk.base()};
@@ -419,7 +419,7 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
   }
 
   const auto result = PublicQuery<schema::binance::V3Trades>(
-      _commonInfo._curlHandle, "/api/v3/trades", {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
+      _commonInfo._httpClient, "/api/v3/trades", {{"symbol", mk.assetsPairStrUpper()}, {"limit", nbTrades}});
 
   PublicTradeVector ret;
   ret.reserve(static_cast<PublicTradeVector::size_type>(result.size()));
@@ -437,7 +437,7 @@ PublicTradeVector BinancePublic::queryLastTrades(Market mk, int nbTrades) {
 }
 
 MonetaryAmount BinancePublic::TickerFunc::operator()(Market mk) {
-  const auto data = PublicQuery<schema::binance::V3TickerPrice>(_commonInfo._curlHandle, "/api/v3/ticker/price",
+  const auto data = PublicQuery<schema::binance::V3TickerPrice>(_commonInfo._httpClient, "/api/v3/ticker/price",
                                                                 {{"symbol", mk.assetsPairStrUpper()}});
   return {data.price, mk.quote()};
 }

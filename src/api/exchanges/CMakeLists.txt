@@ -8,7 +8,9 @@ add_coincenter_library(api-exchange STATIC ${API_EXCHANGES_SRC})
 target_link_libraries(coincenter_api-exchange PUBLIC coincenter_objects)
 target_link_libraries(coincenter_api-exchange PUBLIC coincenter_api-common)
 target_link_libraries(coincenter_api-exchange PRIVATE coincenter_monitoring)
-target_link_libraries(coincenter_api-exchange PRIVATE jwt-cpp)
+# aeronet_jwt is the JWT/JWS target (used by the Upbit private API); it is not part of the
+# aeronet::aeronet umbrella (which only aggregates the server + client).
+target_link_libraries(coincenter_api-exchange PRIVATE aeronet_jwt)
 
 function(add_exchange_test name)
    set(oneValueArgs)
@@ -16,10 +18,10 @@ function(add_exchange_test name)
    cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
    
    add_unit_test(
-     ${name} 
+     ${name}
      ${MY_UNPARSED_ARGUMENTS}
      LIBRARIES
-     jwt-cpp
+     aeronet_jwt
      coincenter_api-exchange
    )
 endfunction()

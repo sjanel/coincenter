@@ -15,9 +15,9 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -32,7 +32,7 @@
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"
 #include "order-book-line.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "request-retry.hpp"
 #include "timedef.hpp"
@@ -42,8 +42,8 @@ namespace cct::api {
 namespace {
 
 template <class T>
-T PublicQuery(CurlHandle& curlHandle, std::string_view method, CurlPostData&& postData = CurlPostData()) {
-  RequestRetry requestRetry(curlHandle, CurlOptions(HttpRequestType::kGet, std::move(postData)));
+T PublicQuery(HttpClient& httpClient, std::string_view method, HttpPostData&& postData = HttpPostData()) {
+  RequestRetry requestRetry(httpClient, HttpRequestOptions(HttpRequestType::kGet, std::move(postData)));
   return requestRetry.query<T>(method, [](const T& response) {
     if constexpr (amc::is_detected<schema::kraken::has_error_t, T>::value) {
       if (!response.error.empty()) {
@@ -96,26 +96,26 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::kraken, fiatConverter, commonAPI, config),
-      _curlHandle(kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
-          config, commonAPI, _curlHandle, exchangeConfig().asset),
+          config, commonAPI, _httpClient, exchangeConfig().asset),
       _marketsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
-          _tradableCurrenciesCache, config, _curlHandle, exchangeConfig().asset),
+          _tradableCurrenciesCache, config, _httpClient, exchangeConfig().asset),
       _allOrderBooksCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::allOrderBooks), _cachedResultVault),
-          _tradableCurrenciesCache, _marketsCache, config, _curlHandle),
+          _tradableCurrenciesCache, _marketsCache, config, _httpClient),
       _orderBookCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::orderBook), _cachedResultVault),
-          _tradableCurrenciesCache, _marketsCache, _curlHandle),
+          _tradableCurrenciesCache, _marketsCache, _httpClient),
       _tickerCache(CachedResultOptions(std::min(exchangeConfig().query.getUpdateFrequency(QueryType::tradedVolume),
                                                 exchangeConfig().query.getUpdateFrequency(QueryType::lastPrice)),
                                        _cachedResultVault),
-                   _tradableCurrenciesCache, _curlHandle) {}
+                   _tradableCurrenciesCache, _httpClient) {}
 
 bool KrakenPublic::healthCheck() {
-  const auto result = PublicQuery<schema::kraken::SystemStatus>(_curlHandle, "/public/SystemStatus");
+  const auto result = PublicQuery<schema::kraken::SystemStatus>(_httpClient, "/public/SystemStatus");
   log::info("{} status: {}", name(), result.result.status);
   return result.result.status == "online";
 }
@@ -125,7 +125,7 @@ std::optional<MonetaryAmount> KrakenPublic::queryWithdrawalFee(CurrencyCode curr
 }
 
 CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
-  const auto result = PublicQuery<schema::kraken::Assets>(_curlHandle, "/public/Assets");
+  const auto result = PublicQuery<schema::kraken::Assets>(_httpClient, "/public/Assets");
   const CurrencyCodeSet& excludedCurrencies = _assetConfig.allExclude;
 
   CurrencyExchangeVector currencies;
@@ -149,7 +149,7 @@ CurrencyExchangeFlatSet KrakenPublic::TradableCurrenciesFunc::operator()() {
 }
 
 std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::MarketsFunc::operator()() {
-  const auto result = PublicQuery<schema::kraken::AssetPairs>(_curlHandle, "/public/AssetPairs");
+  const auto result = PublicQuery<schema::kraken::AssetPairs>(_httpClient, "/public/AssetPairs");
   std::pair<MarketSet, MarketInfoMap> ret;
   ret.first.reserve(static_cast<MarketSet::size_type>(result.result.size()));
   ret.second.reserve(result.result.size());
@@ -220,7 +220,7 @@ MarketOrderBookMap KrakenPublic::AllOrderBooksFunc::operator()(int depth) {
             .assetsPairStrUpper(),
         mk);
   }
-  const auto result = PublicQuery<schema::kraken::Ticker>(_curlHandle, "/public/Ticker");
+  const auto result = PublicQuery<schema::kraken::Ticker>(_httpClient, "/public/Ticker");
   const auto time = Clock::now();
   for (const auto& [krakenAssetPair, assetPairDetails] : result.result) {
     auto it = krakenAssetPairToStdMarketMap.find(krakenAssetPair);
@@ -271,7 +271,7 @@ MarketOrderBook KrakenPublic::OrderBookFunc::operator()(Market mk, int count) {
   MarketOrderBookLines orderBookLines;
 
   const auto result =
-      PublicQuery<schema::kraken::Depth>(_curlHandle, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
+      PublicQuery<schema::kraken::Depth>(_httpClient, "/public/Depth", {{"pair", krakenAssetPair}, {"count", count}});
   const auto dataIt = result.result.find(krakenAssetPair);
   const auto nowTime = Clock::now();
   if (dataIt != result.result.end()) {
@@ -309,7 +309,7 @@ KrakenPublic::TickerFunc::Last24hTradedVolumeAndLatestPricePair KrakenPublic::Ti
 
   if (krakenMarket.isDefined()) {
     const auto krakenPair = krakenMarket.assetsPairStrUpper();
-    const auto result = PublicQuery<schema::kraken::Ticker>(_curlHandle, "/public/Ticker", {{"pair", krakenPair}});
+    const auto result = PublicQuery<schema::kraken::Ticker>(_httpClient, "/public/Ticker", {{"pair", krakenPair}});
     const auto dataIt = result.result.find(krakenPair);
     if (dataIt != result.result.end()) {
       return {MonetaryAmount(dataIt->second.v[1], mk.base()), MonetaryAmount(dataIt->second.c[0], mk.quote())};
@@ -325,7 +325,7 @@ PublicTradeVector KrakenPublic::queryLastTrades(Market mk, int nbLastTrades) {
   const Market krakenMarket = GetKrakenMarketOrDefault(_tradableCurrenciesCache.get(), mk);
   if (krakenMarket.isDefined()) {
     const auto krakenPair = krakenMarket.assetsPairStrUpper();
-    const auto result = PublicQuery<schema::kraken::Trades>(_curlHandle, "/public/Trades",
+    const auto result = PublicQuery<schema::kraken::Trades>(_httpClient, "/public/Trades",
                                                             {{"pair", krakenPair}, {"count", nbLastTrades}});
 
     const auto dataIt = result.result.find(krakenPair);

@@ -6,7 +6,7 @@
 
 #include "binance-schema.hpp"
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -15,7 +15,7 @@
 #include "exchangepublicapitypes.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "public-trade-vector.hpp"
 #include "runmodes.hpp"
 
@@ -77,7 +77,7 @@ class BinancePublic : public ExchangePublic {
 
   struct CommonInfo {
     const schema::ExchangeAssetConfig& _assetConfig;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
   };
 
   struct ExchangeInfoFunc {
@@ -92,7 +92,7 @@ class BinancePublic : public ExchangePublic {
     MarketSet operator()();
 
     CachedResult<ExchangeInfoFunc>& _exchangeConfigCache;
-    CurlHandle& _curlHandle;
+    HttpClient& _httpClient;
     const schema::ExchangeAssetConfig& _assetConfig;
   };
 
@@ -122,7 +122,7 @@ class BinancePublic : public ExchangePublic {
     CommonInfo& _commonInfo;
   };
 
-  CurlHandle _curlHandle;
+  HttpClient _httpClient;
   CommonInfo _commonInfo;
   CachedResult<ExchangeInfoFunc> _exchangeConfigCache;
   CachedResult<MarketsFunc> _marketsCache;

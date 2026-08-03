@@ -21,9 +21,9 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "curlhandle.hpp"
-#include "curloptions.hpp"
-#include "curlpostdata.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
+#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -42,7 +42,7 @@
 #include "opened-order.hpp"
 #include "orderid.hpp"
 #include "ordersconstraints.hpp"
-#include "permanentcurloptions.hpp"
+#include "permanentrequestoptions.hpp"
 #include "query-retry-policy.hpp"
 #include "request-retry.hpp"
 #include "ssl_sha.hpp"
@@ -64,13 +64,13 @@ namespace {
 
 enum class KrakenErrorEnum : int8_t { kExpiredOrder, kUnknownWithdrawKey, kUnknownError, kNoError };
 
-template <class T, class CurlPostDataT = CurlPostData>
-auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view method,
-                  CurlPostDataT&& curlPostData = CurlPostData()) {
-  CurlOptions opts(HttpRequestType::kPost, std::forward<CurlPostDataT>(curlPostData));
+template <class T, class HttpPostDataT = HttpPostData>
+auto PrivateQuery(HttpClient& httpClient, const APIKey& apiKey, std::string_view method,
+                  HttpPostDataT&& httpPostData = HttpPostData()) {
+  HttpRequestOptions opts(HttpRequestType::kPost, std::forward<HttpPostDataT>(httpPostData));
   opts.mutableHttpHeaders().emplace_back("API-Key", apiKey.key());
 
-  RequestRetry requestRetry(curlHandle, std::move(opts),
+  RequestRetry requestRetry(httpClient, std::move(opts),
                             QueryRetryPolicy{.initialRetryDelay = seconds{1}, .nbMaxRetries = 3});
 
   KrakenErrorEnum err = KrakenErrorEnum::kNoError;
@@ -99,12 +99,12 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
             }
             return RequestRetry::Status::kResponseError;
           },
-          [&apiKey, method](CurlOptions& curlOptions) {
+          [&apiKey, method](HttpRequestOptions& requestOptions) {
             Nonce noncePostData = Nonce_TimeSinceEpochInMs();
-            curlOptions.mutablePostData().set("nonce", noncePostData);
+            requestOptions.mutablePostData().set("nonce", noncePostData);
 
             // concatenate nonce and postdata and compute SHA256
-            noncePostData.append(curlOptions.postData().str());
+            noncePostData.append(requestOptions.postData().str());
 
             // concatenate path and nonce_postdata (path + ComputeSha256(nonce + postdata))
             auto sha256 = ssl::Sha256(noncePostData);
@@ -116,7 +116,7 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
             static constexpr std::string_view kSignatureKey = "API-Sign";
 
             // and compute HMAC
-            curlOptions.mutableHttpHeaders().set_back(kSignatureKey,
+            requestOptions.mutableHttpHeaders().set_back(kSignatureKey,
                                                       B64Encode(ssl::Sha512Bin(path, B64Decode(apiKey.privateKey()))));
           }),
       err);
@@ -125,14 +125,14 @@ auto PrivateQuery(CurlHandle& curlHandle, const APIKey& apiKey, std::string_view
 
 KrakenPrivate::KrakenPrivate(const CoincenterInfo& config, KrakenPublic& krakenPublic, const APIKey& apiKey)
     : ExchangePrivate(config, krakenPublic, apiKey),
-      _curlHandle(KrakenPublic::kUrlBase, config.metricGatewayPtr(), permanentCurlOptionsBuilder().build(),
+      _httpClient(KrakenPublic::kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
                   config.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
-          _curlHandle, _apiKey, krakenPublic) {}
+          _httpClient, _apiKey, krakenPublic) {}
 
 bool KrakenPrivate::validateApiKey() {
-  return PrivateQuery<schema::kraken::PrivateBalance>(_curlHandle, _apiKey, "/private/Balance").second ==
+  return PrivateQuery<schema::kraken::PrivateBalance>(_httpClient, _apiKey, "/private/Balance").second ==
          KrakenErrorEnum::kNoError;
 }
 
@@ -140,7 +140,7 @@ CurrencyExchangeFlatSet KrakenPrivate::queryTradableCurrencies() { return _excha
 
 BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanceOptions) {
   BalancePortfolio balancePortfolio;
-  auto [res, err] = PrivateQuery<schema::kraken::PrivateBalance>(_curlHandle, _apiKey, "/private/Balance");
+  auto [res, err] = PrivateQuery<schema::kraken::PrivateBalance>(_httpClient, _apiKey, "/private/Balance");
   // Kraken returns an empty array in case of account with no balance at all
   MonetaryAmountVector balanceAmounts;
   balanceAmounts.reserve(static_cast<MonetaryAmountVector::size_type>(res.result.size()));
@@ -199,7 +199,7 @@ BalancePortfolio KrakenPrivate::queryAccountBalance(const BalanceOptions& balanc
 Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   auto [depositMethods, errDepositMethods] = PrivateQuery<schema::kraken::DepositMethods>(
-      _curlHandle, _apiKey, "/private/DepositMethods", {{"asset", krakenCurrency.altStr()}});
+      _httpClient, _apiKey, "/private/DepositMethods", {{"asset", krakenCurrency.altStr()}});
   const CoincenterInfo& coincenterInfo = _exchangePublic.coincenterInfo();
   const bool doCheckWallet =
       coincenterInfo.exchangeConfig(_exchangePublic.exchangeNameEnum()).withdraw.validateDepositAddressesInFile;
@@ -211,13 +211,13 @@ Wallet KrakenPrivate::DepositWalletFunc::operator()(CurrencyCode currencyCode) {
 
   for (const auto& depositMethod : depositMethods.result) {
     auto [res, err] = PrivateQuery<schema::kraken::DepositAddresses>(
-        _curlHandle, _apiKey, "/private/DepositAddresses",
+        _httpClient, _apiKey, "/private/DepositAddresses",
         {{"asset", krakenCurrency.altStr()}, {"method", depositMethod.method}});
     if (res.result.empty()) {
       // This means user has not created a wallet yet, but it's possible to do it via DepositMethods query above.
       log::warn("No deposit address found on {} for {}, creating a new one", eName, currencyCode);
       std::tie(res, err) = PrivateQuery<schema::kraken::DepositAddresses>(
-          _curlHandle, _apiKey, "/private/DepositAddresses",
+          _httpClient, _apiKey, "/private/DepositAddresses",
           {{"asset", krakenCurrency.altStr()}, {"method", depositMethod.method}, {"new", "true"}});
       if (res.result.empty()) {
         log::error("Cannot create a new deposit address on {} for {}", eName, currencyCode);
@@ -287,7 +287,7 @@ ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& clos
 
   int page = 0;
 
-  CurlPostData params{{"ofs", page}, {"trades", "true"}};
+  HttpPostData params{{"ofs", page}, {"trades", "true"}};
 
   if (closedOrdersConstraints.isPlacedTimeAfterDefined()) {
     params.emplace_back("start", TimestampToSecondsSinceEpoch(closedOrdersConstraints.placedAfter()));
@@ -306,7 +306,7 @@ ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& clos
     params.set("ofs", page);
 
     auto [data, err] =
-        PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_curlHandle, _apiKey, "/private/ClosedOrders", params);
+        PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_httpClient, _apiKey, "/private/ClosedOrders", params);
 
     nbOrdersRetrieved = 0;
 
@@ -361,7 +361,7 @@ ClosedOrderVector KrakenPrivate::queryClosedOrders(const OrdersConstraints& clos
 }
 
 OpenedOrderVector KrakenPrivate::queryOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
-  auto [res, err] = PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_curlHandle, _apiKey, "/private/OpenOrders",
+  auto [res, err] = PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_httpClient, _apiKey, "/private/OpenOrders",
                                                                        {{"trades", "true"}});
   OpenedOrderVector openedOrders;
   MarketSet markets;
@@ -408,7 +408,7 @@ OpenedOrderVector KrakenPrivate::queryOpenedOrders(const OrdersConstraints& open
 
 int KrakenPrivate::cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints) {
   if (openedOrdersConstraints.noConstraints()) {
-    auto [res, err] = PrivateQuery<schema::kraken::CancelAllOrders>(_curlHandle, _apiKey, "/private/CancelAll");
+    auto [res, err] = PrivateQuery<schema::kraken::CancelAllOrders>(_httpClient, _apiKey, "/private/CancelAll");
     return res.result.count;
   }
   OpenedOrderVector openedOrders = queryOpenedOrders(openedOrdersConstraints);
@@ -432,12 +432,12 @@ Deposit::Status DepositStatusFromStatus(schema::kraken::DepositStatus::Deposit::
 
 DepositsSet KrakenPrivate::queryRecentDeposits(const DepositsConstraints& depositsConstraints) {
   Deposits deposits;
-  CurlPostData options;
+  HttpPostData options;
   if (depositsConstraints.isCurDefined()) {
     options.emplace_back("asset", depositsConstraints.currencyCode().str());
   }
   auto [res, err] =
-      PrivateQuery<schema::kraken::DepositStatus>(_curlHandle, _apiKey, "/private/DepositStatus", options);
+      PrivateQuery<schema::kraken::DepositStatus>(_httpClient, _apiKey, "/private/DepositStatus", options);
   for (auto& trx : res.result) {
     Deposit::Status status = DepositStatusFromStatus(trx.status);
 
@@ -482,8 +482,8 @@ Withdraw::Status WithdrawStatusFromStatusStr(std::string_view statusStr) {
   throw exception("Unrecognized withdraw status '{}' from Kraken", statusStr);
 }
 
-CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
-  CurlPostData options;
+HttpPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& withdrawsConstraints) {
+  HttpPostData options;
   if (withdrawsConstraints.isCurDefined()) {
     options.emplace_back("asset", withdrawsConstraints.currencyCode().str());
   }
@@ -494,7 +494,7 @@ CurlPostData CreateOptionsFromWithdrawConstraints(const WithdrawsConstraints& wi
 WithdrawsSet KrakenPrivate::queryRecentWithdraws(const WithdrawsConstraints& withdrawsConstraints) {
   Withdraws withdraws;
   auto [res, err] = PrivateQuery<schema::kraken::WithdrawStatus>(
-      _curlHandle, _apiKey, "/private/WithdrawStatus", CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
+      _httpClient, _apiKey, "/private/WithdrawStatus", CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   for (auto& trx : res.result) {
     if (trx.asset.size() > CurrencyCode::kMaxLen) {
       log::warn("Currency code {} is too long, skipping", trx.asset);
@@ -566,7 +566,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, M
   // This will not work if user has enough Kraken Fee Credits (in this case, they will be used instead).
   // Warning: this does not change the currency of the returned fee from Kraken in the get Closed / Opened orders,
   // which will be always in quote currency (as per the documentation)
-  CurlPostData placePostData{{"pair", krakenMarket.assetsPairStrUpper()},
+  HttpPostData placePostData{{"pair", krakenMarket.assetsPairStrUpper()},
                              {"type", orderType},
                              {"ordertype", isTakerStrategy ? "market" : "limit"},
                              {"price", price.amountStr()},
@@ -579,7 +579,7 @@ PlaceOrderInfo KrakenPrivate::placeOrder([[maybe_unused]] MonetaryAmount from, M
   }
 
   auto [placeOrderRes, err] =
-      PrivateQuery<schema::kraken::AddOrder>(_curlHandle, _apiKey, "/private/AddOrder", std::move(placePostData));
+      PrivateQuery<schema::kraken::AddOrder>(_httpClient, _apiKey, "/private/AddOrder", std::move(placePostData));
   // {"error":[],"result":{"descr":{"order":"buy 24.69898116 XRPETH @ limit 0.0003239"},"txid":["OWBA44-TQZQ7-EEYSXA"]}}
   if (isSimulation) {
     // In simulation mode, there is no txid returned. If we arrived here (after CollectResults) we assume that the call
@@ -619,7 +619,7 @@ OrderInfo KrakenPrivate::cancelOrder(OrderIdView orderId, const TradeContext& tr
 
 void KrakenPrivate::cancelOrderProcess(OrderIdView orderId) {
   auto [response, err] =
-      PrivateQuery<schema::kraken::CancelOrder>(_curlHandle, _apiKey, "/private/CancelOrder", {{"txid", orderId}});
+      PrivateQuery<schema::kraken::CancelOrder>(_httpClient, _apiKey, "/private/CancelOrder", {{"txid", orderId}});
   if (err == KrakenErrorEnum::kExpiredOrder) {
     log::warn("{} is unable to find order {} - it has probably expired or been matched", exchangeName(), orderId);
   }
@@ -668,19 +668,19 @@ schema::kraken::OpenedOrClosedOrders KrakenPrivate::queryOrdersData(int64_t user
                                                                     QueryOrder queryOrder) {
   static constexpr int kNbMaxRetriesQueryOrders = 10;
   int nbRetries = 0;
-  CurlPostData ordersPostData{{"trades", "true"}, {"userref", userRef}};
+  HttpPostData ordersPostData{{"trades", "true"}, {"userref", userRef}};
   const bool isOpenedFirst = queryOrder == QueryOrder::kOpenedThenClosed;
   const std::string_view firstQueryFullName = isOpenedFirst ? "/private/OpenOrders" : "/private/ClosedOrders";
   do {
     auto data =
-        PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_curlHandle, _apiKey, firstQueryFullName, ordersPostData)
+        PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_httpClient, _apiKey, firstQueryFullName, ordersPostData)
             .first;
     const auto& firstOrders = isOpenedFirst ? data.result.open : data.result.closed;
     bool foundOrder = firstOrders.contains(orderId);
     if (!foundOrder) {
       const std::string_view secondQueryFullName = isOpenedFirst ? "/private/ClosedOrders" : "/private/OpenOrders";
       auto secondData =
-          PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_curlHandle, _apiKey, secondQueryFullName, ordersPostData)
+          PrivateQuery<schema::kraken::OpenedOrClosedOrders>(_httpClient, _apiKey, secondQueryFullName, ordersPostData)
               .first;
       if (isOpenedFirst) {
         data.result.closed = std::move(secondData.result.closed);
@@ -720,7 +720,7 @@ InitiatedWithdrawInfo KrakenPrivate::launchWithdraw(MonetaryAmount grossAmount, 
   CurrencyExchange krakenCurrency = _exchangePublic.convertStdCurrencyToCurrencyExchange(currencyCode);
   string krakenWalletKey = KrakenWalletKeyName(destinationWallet);
 
-  auto [withdrawData, err] = PrivateQuery<schema::kraken::Withdraw>(_curlHandle, _apiKey, "/private/Withdraw",
+  auto [withdrawData, err] = PrivateQuery<schema::kraken::Withdraw>(_httpClient, _apiKey, "/private/Withdraw",
                                                                     {{"amount", grossAmount.amountStr()},
                                                                      {"asset", krakenCurrency.altStr()},
                                                                      {"key", krakenWalletKey},

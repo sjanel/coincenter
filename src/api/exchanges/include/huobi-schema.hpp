@@ -18,20 +18,15 @@ using has_status_t = decltype(std::declval<T>().status);
 
 // PUBLIC
 
-// https://huobiapi.github.io/docs/spot/v1/en/#get-system-status
+// https://huobiapi.github.io/docs/spot/v1/en/#get-market-status
 
-struct V2SystemStatus {
-  struct Status {
-    string description;
+struct V2MarketStatus {
+  struct Data {
+    int8_t marketStatus{};  // 1: normal, 2: halted, 3: cancel-only
   };
 
-  struct Incidents {
-    auto operator<=>(const Incidents&) const = default;
-  };
-
-  vector<Incidents> incidents;
-
-  Status status;
+  int code{};
+  Data data;
 };
 
 // https://huobiapi.github.io/docs/spot/v1/en/#apiv2-currency-amp-chains

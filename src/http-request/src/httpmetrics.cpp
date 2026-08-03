@@ -1,4 +1,4 @@
-#include "curlmetrics.hpp"
+#include "httpmetrics.hpp"
 
 #include "httprequesttype.hpp"
 #include "metric.hpp"
@@ -32,7 +32,7 @@ MetricKeyPerRequestType CreateNbRequestErrorsMetricKeys() {
 
 }  // namespace
 
-const MetricKeyPerRequestType CurlMetrics::kNbRequestsKeys = CreateNbRequestsMetricKeys();
-const MetricKeyPerRequestType CurlMetrics::kRequestDurationKeys = CreateRequestDurationMetricKeys();
-const MetricKeyPerRequestType CurlMetrics::kNbRequestErrorKeys = CreateNbRequestErrorsMetricKeys();
+const MetricKeyPerRequestType HttpMetrics::kNbRequestsKeys = CreateNbRequestsMetricKeys();
+const MetricKeyPerRequestType HttpMetrics::kRequestDurationKeys = CreateRequestDurationMetricKeys();
+const MetricKeyPerRequestType HttpMetrics::kNbRequestErrorKeys = CreateNbRequestErrorsMetricKeys();
 }  // namespace cct

@@ -8,7 +8,7 @@
 #include "binance-common-api.hpp"
 #include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
-#include "curlhandle.hpp"
+#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
@@ -60,8 +60,7 @@ class CommonAPI : public CacheFileUpdatorInterface {
     CurrencyCodeVector retrieveFiatsSource2();
 
    private:
-    CurlHandle _curlHandle1;
-    CurlHandle _curlHandle2;
+    HttpClient _httpClient;
   };
 
   CachedResultVault _cachedResultVault;
