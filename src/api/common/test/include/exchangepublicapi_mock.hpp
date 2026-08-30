@@ -15,8 +15,8 @@
 namespace cct::api {
 class MockExchangePublic : public ExchangePublic {
  public:
-  MockExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter &fiatConverter, CommonAPI &commonApi,
-                     const CoincenterInfo &config)
+  MockExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter& fiatConverter, CommonAPI& commonApi,
+                     const CoincenterInfo& config)
       : ExchangePublic(exchangeNameEnum, fiatConverter, commonApi, config) {}
 
   MOCK_METHOD(bool, healthCheck, (), (override));

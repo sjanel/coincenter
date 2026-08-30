@@ -14,17 +14,17 @@ class CoincenterCommands;
 
 class CoincenterCommandsProcessor {
  public:
-  explicit CoincenterCommandsProcessor(Coincenter &coincenter);
+  explicit CoincenterCommandsProcessor(Coincenter& coincenter);
 
   /// Launch given commands and return the number of processed commands.
-  int process(const CoincenterCommands &coincenterCommands);
+  int process(const CoincenterCommands& coincenterCommands);
 
  private:
   TransferableCommandResultVector processGroupedCommands(
       std::span<const CoincenterCommand> groupedCommands,
       std::span<const TransferableCommandResult> previousTransferableResults);
 
-  Coincenter &_coincenter;
+  Coincenter& _coincenter;
   QueryResultPrinter _queryResultPrinter;
 };
 }  // namespace cct

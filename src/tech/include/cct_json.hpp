@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-
 #include <glaze/glaze.hpp>  // IWYU pragma: export
 
 namespace cct::json {

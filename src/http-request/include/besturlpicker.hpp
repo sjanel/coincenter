@@ -32,16 +32,16 @@ class BestURLPicker {
       : BestURLPicker(std::span<const std::string_view>(aBaseUrl)) {}
 
   BestURLPicker(const string[]) = delete;
-  BestURLPicker(const char *[]) = delete;
+  BestURLPicker(const char*[]) = delete;
 
   /// Builds a BestURLPicker with a single base URL.
   /// The chosen base URL is thus trivial and will always be the same.
   /// Warning: given base URL should come from static storage
-  BestURLPicker(const std::string_view &singleBaseUrl)
+  BestURLPicker(const std::string_view& singleBaseUrl)
       : BestURLPicker(std::span<const std::string_view>(std::addressof(singleBaseUrl), 1)) {}
 
-  BestURLPicker(const string &) = delete;
-  BestURLPicker(const char *) = delete;
+  BestURLPicker(const string&) = delete;
+  BestURLPicker(const char*) = delete;
 
   // Return the best URL that will be used by the next query.
   // A "good" URL is some URL that has lower average response time (all queries mixed) according to the others.
@@ -59,7 +59,7 @@ class BestURLPicker {
   explicit BestURLPicker(std::span<const std::string_view> baseUrls);
 
   struct ResponseTimeStats {
-    constexpr bool operator==(const ResponseTimeStats &) const noexcept = default;
+    constexpr bool operator==(const ResponseTimeStats&) const noexcept = default;
 
     [[nodiscard]] constexpr auto score() const noexcept {
       return static_cast<uint32_t>(avgResponseTimeInMs) + avgDeviationInMs;
@@ -73,7 +73,7 @@ class BestURLPicker {
   using ResponseTimeStatsPerBaseUrl = FixedCapacityVector<ResponseTimeStats, kNbMaxBaseUrl>;
 
   // Non-owning pointer, should come from static storage (default special operations are fine)
-  const std::string_view *_pBaseUrls{};
+  const std::string_view* _pBaseUrls{};
   ResponseTimeStatsPerBaseUrl _responseTimeStatsPerBaseUrl;
 };
 

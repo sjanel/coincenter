@@ -29,7 +29,7 @@ class WithdrawOptions {
 
   constexpr Mode mode() const { return _mode; }
 
-  bool operator==(const WithdrawOptions &) const noexcept = default;
+  bool operator==(const WithdrawOptions&) const noexcept = default;
 
  private:
   /// The waiting time between each query of withdraw info to check withdraw status from an exchange.

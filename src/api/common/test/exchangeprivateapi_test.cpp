@@ -48,7 +48,7 @@
 namespace cct {
 
 namespace {
-BalancePortfolio addTradedAmounts(const BalancePortfolio &balancePortfolio, const TradedAmounts &tradedAmounts) {
+BalancePortfolio addTradedAmounts(const BalancePortfolio& balancePortfolio, const TradedAmounts& tradedAmounts) {
   BalancePortfolio ret = balancePortfolio;
   ret += tradedAmounts.to;
   ret += -tradedAmounts.from;
@@ -57,24 +57,24 @@ BalancePortfolio addTradedAmounts(const BalancePortfolio &balancePortfolio, cons
 
 }  // namespace
 
-static inline bool operator==(const TradedAmountsVectorWithFinalAmount &lhs,
-                              const TradedAmountsVectorWithFinalAmount &rhs) {
+static inline bool operator==(const TradedAmountsVectorWithFinalAmount& lhs,
+                              const TradedAmountsVectorWithFinalAmount& rhs) {
   return lhs.finalAmount == rhs.finalAmount && lhs.tradedAmountsVector == rhs.tradedAmountsVector;
 }
 
-static inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
+static inline bool operator==(const DeliveredWithdrawInfo& lhs, const DeliveredWithdrawInfo& rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 }  // namespace cct
 
 namespace cct::api {
 
-static inline bool operator==(const TradeContext &lhs, const TradeContext &rhs) {
+static inline bool operator==(const TradeContext& lhs, const TradeContext& rhs) {
   // We don't compare on value userRef which is set from a timestamp
   return lhs.market == rhs.market && lhs.side == rhs.side;
 }
 
-static inline bool operator==(const TradeInfo &lhs, const TradeInfo &rhs) {
+static inline bool operator==(const TradeInfo& lhs, const TradeInfo& rhs) {
   return lhs.tradeContext == rhs.tradeContext && lhs.options == rhs.options;
 }
 
@@ -85,7 +85,7 @@ class ExchangePrivateTest : public ::testing::Test {
     EXPECT_CALL(exchangePublic, queryTradableMarkets()).WillOnce(testing::Return(MarketSet{market}));
   }
 
-  TradeInfo computeTradeInfo(const TradeContext &tradeContext, const TradeOptions &tradeOptions) const {
+  TradeInfo computeTradeInfo(const TradeContext& tradeContext, const TradeOptions& tradeOptions) const {
     TradeOptions resultingTradeOptions(tradeOptions, exchangePublic.exchangeConfig().query.trade);
     return {tradeContext, resultingTradeOptions};
   }
@@ -448,11 +448,11 @@ TEST_F(ExchangePrivateTest, MakerTradeQuoteToBaseTimeout) {
   EXPECT_EQ(exchangePrivate.trade(from, market.base(), tradeOptions), partialMatchedTradedAmounts);
 }
 
-inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
+inline bool operator==(const InitiatedWithdrawInfo& lhs, const InitiatedWithdrawInfo& rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
-inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
+inline bool operator==(const SentWithdrawInfo& lhs, const SentWithdrawInfo& rhs) {
   return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 
@@ -643,7 +643,7 @@ class ExchangePrivateDustSweeperTest : public ExchangePrivateTest {
   }
 
   std::optional<MonetaryAmount> dustThreshold(CurrencyCode cur) {
-    const auto &dustThresholds = exchangePublic.exchangeConfig().query.dustAmountsThreshold;
+    const auto& dustThresholds = exchangePublic.exchangeConfig().query.dustAmountsThreshold;
     auto dustThresholdLb = dustThresholds.find(MonetaryAmount(0, cur));
     if (dustThresholdLb == dustThresholds.end()) {
       return std::nullopt;

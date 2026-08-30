@@ -5,11 +5,11 @@
 
 #include "cachedresult.hpp"
 #include "cct_string.hpp"
-#include "httpclient.hpp"
 #include "currencycodeset.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
 #include "public-trade-vector.hpp"
 
 namespace cct {

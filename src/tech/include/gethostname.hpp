@@ -12,10 +12,10 @@ class HostNameGetter {
   HostNameGetter() noexcept = default;
 #endif
 
-  HostNameGetter(const HostNameGetter &) = delete;
-  HostNameGetter &operator=(const HostNameGetter &) = delete;
-  HostNameGetter(HostNameGetter &&) = delete;
-  HostNameGetter &operator=(HostNameGetter &&) = delete;
+  HostNameGetter(const HostNameGetter&) = delete;
+  HostNameGetter& operator=(const HostNameGetter&) = delete;
+  HostNameGetter(HostNameGetter&&) = delete;
+  HostNameGetter& operator=(HostNameGetter&&) = delete;
 
 #ifdef _WIN32
   ~HostNameGetter();

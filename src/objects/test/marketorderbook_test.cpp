@@ -21,7 +21,7 @@ MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookL
   MarketOrderBookLines marketOrderBookLines;
   marketOrderBookLines.reserve(init.size());
 
-  for (const auto &orderBookLine : init) {
+  for (const auto& orderBookLine : init) {
     if (orderBookLine.amount() < 0) {
       marketOrderBookLines.pushAsk(-orderBookLine.amount(), orderBookLine.price());
     } else {

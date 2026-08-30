@@ -17,9 +17,6 @@
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -28,6 +25,9 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "kucoin-schema.hpp"
 #include "market.hpp"
@@ -66,7 +66,8 @@ T PublicQuery(HttpClient& httpClient, std::string_view endpoint, const HttpPostD
 
 KucoinPublic::KucoinPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::kucoin, fiatConverter, commonAPI, config),
-      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _httpClient, _coincenterInfo, commonAPI),

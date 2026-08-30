@@ -19,7 +19,7 @@ PriceOptions::PriceOptions(RelativePrice relativePrice) : _relativePrice(relativ
   }
 }
 
-PriceOptions::PriceOptions(const schema::ExchangeQueryTradeConfig &tradeConfig)
+PriceOptions::PriceOptions(const schema::ExchangeQueryTradeConfig& tradeConfig)
     : _priceStrategy(tradeConfig.strategy), _isDefault(false) {}
 
 PriceOptions::PriceOptions(MonetaryAmount fixedPrice) : _fixedPrice(fixedPrice), _isDefault(false) {}

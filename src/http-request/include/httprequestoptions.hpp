@@ -5,8 +5,8 @@
 #include <utility>
 
 #include "cct_type_traits.hpp"
-#include "httppostdata.hpp"
 #include "flatkeyvaluestring.hpp"
+#include "httppostdata.hpp"
 #include "httprequesttype.hpp"
 
 namespace cct {
@@ -24,25 +24,25 @@ class HttpRequestOptions {
       : _verbose(verbose == Verbose::kOn), _requestType(requestType) {}
 
   HttpRequestOptions(HttpRequestType requestType, HttpPostData postData,
-              PostDataFormat postDataFormat = PostDataFormat::kString, Verbose verbose = Verbose::kOff)
+                     PostDataFormat postDataFormat = PostDataFormat::kString, Verbose verbose = Verbose::kOff)
       : _postdata(std::move(postData)), _verbose(verbose == Verbose::kOn), _requestType(requestType) {
     if (postDataFormat == PostDataFormat::json) {
       setPostDataInJsonFormat();
     }
   }
 
-  HttpHeaders &mutableHttpHeaders() { return _httpHeaders; }
-  const HttpHeaders &httpHeaders() const { return _httpHeaders; }
+  HttpHeaders& mutableHttpHeaders() { return _httpHeaders; }
+  const HttpHeaders& httpHeaders() const { return _httpHeaders; }
 
-  const char *proxyUrl() const { return _proxyUrl; }
+  const char* proxyUrl() const { return _proxyUrl; }
 
-  void setProxyUrl(const char *proxyUrl, bool reset = false) {
+  void setProxyUrl(const char* proxyUrl, bool reset = false) {
     _proxyUrl = proxyUrl;
     _proxyReset = reset;
   }
 
-  HttpPostData &mutablePostData() { return _postdata; }
-  const HttpPostData &postData() const { return _postdata; }
+  HttpPostData& mutablePostData() { return _postdata; }
+  const HttpPostData& postData() const { return _postdata; }
 
   bool isProxyReset() const { return _proxyReset; }
 
@@ -62,7 +62,7 @@ class HttpRequestOptions {
   }
 
   HttpHeaders _httpHeaders;
-  const char *_proxyUrl = nullptr;
+  const char* _proxyUrl = nullptr;
   HttpPostData _postdata;
   bool _proxyReset = false;
   bool _verbose = false;

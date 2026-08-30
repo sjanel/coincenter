@@ -25,7 +25,7 @@ class AccountOwner {
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
-  bool operator==(const AccountOwner &) const = default;
+  bool operator==(const AccountOwner&) const = default;
 
  private:
   string _enName;

@@ -6,7 +6,7 @@
 namespace cct {
 class BalancePerExchangePortfolio {
  public:
-  explicit BalancePerExchangePortfolio(const BalancePerExchange &balancePerExchange)
+  explicit BalancePerExchangePortfolio(const BalancePerExchange& balancePerExchange)
       : _balancePerExchange(balancePerExchange) {}
 
   /// Pretty print table of balance.
@@ -16,7 +16,7 @@ class BalancePerExchangePortfolio {
  private:
   BalancePortfolio computeTotal() const;
 
-  const BalancePerExchange &_balancePerExchange;
+  const BalancePerExchange& _balancePerExchange;
 };
 
 }  // namespace cct

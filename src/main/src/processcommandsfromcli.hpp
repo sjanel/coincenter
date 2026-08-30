@@ -7,6 +7,6 @@
 #include "runmodes.hpp"
 
 namespace cct {
-void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands &coincenterCommands,
-                            const CoincenterCmdLineOptions &generalOptions, settings::RunMode runMode);
+void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands& coincenterCommands,
+                            const CoincenterCmdLineOptions& generalOptions, settings::RunMode runMode);
 }

@@ -122,9 +122,9 @@ TEST(FlatKeyValueStringTest, WithNullTerminatingCharAsSeparator) {
   EXPECT_EQ(kvPairs.str(), "tata:abc\0huhu:haha\0&newField:&&newValue&&"sv);
 
   int kvPairPos = 0;
-  for (const auto &kv : kvPairs) {
+  for (const auto& kv : kvPairs) {
     const auto key = kv.key();
-    const char *kvPairPtr = key.data();
+    const char* kvPairPtr = key.data();
     switch (kvPairPos++) {
       case 0:
         ASSERT_STREQ(kvPairPtr, "tata:abc");
@@ -151,7 +151,7 @@ class FlatKeyValueStringCase1 : public ::testing::Test {
 };
 
 TEST_F(FlatKeyValueStringCase1, Front) {
-  const auto &kvFront = kvPairs.front();
+  const auto& kvFront = kvPairs.front();
 
   EXPECT_EQ(kvFront.key(), "units");
   EXPECT_EQ(kvFront.keyLen(), 5U);
@@ -199,7 +199,7 @@ TEST_F(FlatKeyValueStringCase1, Get) {
 
 TEST_F(FlatKeyValueStringCase1, ForwardIterator) {
   int itPos = 0;
-  for (const auto &kv : kvPairs) {
+  for (const auto& kv : kvPairs) {
     const auto key = kv.key();
     const auto val = kv.val();
     switch (itPos++) {
@@ -290,7 +290,7 @@ TEST_F(FlatKeyValueStringCase1, BackwardIterator) {
 
 TEST_F(FlatKeyValueStringCase1, EraseIncrementDecrement) {
   kvPairs.erase(kvPairs.begin());
-  const auto &kvFront = kvPairs.front();
+  const auto& kvFront = kvPairs.front();
 
   EXPECT_EQ(kvFront.key(), "price");
   EXPECT_EQ(kvFront.val(), "357.78");
@@ -314,7 +314,7 @@ TEST_F(FlatKeyValueStringCase1, EraseIncrementDecrement) {
   kvPairs.erase(it);
 
   int itPos = 0;
-  for (const auto &kv : kvPairs) {
+  for (const auto& kv : kvPairs) {
     const auto key = kv.key();
     const auto val = kv.val();
     switch (itPos++) {

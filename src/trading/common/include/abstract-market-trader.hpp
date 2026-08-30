@@ -17,20 +17,20 @@ class AbstractMarketTrader {
  public:
   virtual ~AbstractMarketTrader() = default;
 
-  virtual TraderCommand trade(const MarketDataView &marketDataView) = 0;
+  virtual TraderCommand trade(const MarketDataView& marketDataView) = 0;
 
   std::string_view name() const { return _name; }
 
-  const MarketTraderEngineState &marketTraderEngineState() const { return _marketTraderEngineState; }
+  const MarketTraderEngineState& marketTraderEngineState() const { return _marketTraderEngineState; }
 
  protected:
   /// Constructs a new AbstractMarketTrader.
   /// @param name should be a view to a constant string as only a std::string_view will be stored in this object.
-  AbstractMarketTrader(std::string_view name, const MarketTraderEngineState &marketTraderEngineState) noexcept;
+  AbstractMarketTrader(std::string_view name, const MarketTraderEngineState& marketTraderEngineState) noexcept;
 
  private:
   std::string_view _name;
-  const MarketTraderEngineState &_marketTraderEngineState;
+  const MarketTraderEngineState& _marketTraderEngineState;
 };
 
 }  // namespace cct

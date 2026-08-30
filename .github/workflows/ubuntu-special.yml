@@ -10,6 +10,9 @@ jobs:
   ubuntu-special-build:
     name: Build on Ubuntu with monitoring / protobuf support
     runs-on: ubuntu-24.04
+    env:
+      CC: gcc-13
+      CXX: g++-13
     strategy:
       matrix:
         buildmode: [Debug]
@@ -23,7 +26,7 @@ jobs:
       - name: Prerequisites
         run: |
           sudo apt update
-          sudo apt install cmake libssl-dev git libzstd-dev libbrotli-dev ninja-build -y --no-install-recommends
+          sudo apt install cmake gcc-13 g++-13 libssl-dev git libzstd-dev libbrotli-dev ninja-build -y --no-install-recommends
 
       - name: Install prometheus-cpp
         run: |

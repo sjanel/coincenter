@@ -9,21 +9,21 @@ class AbstractMetricGateway;
 
 class MetricsExporter {
  public:
-  explicit MetricsExporter(AbstractMetricGateway *pMetricsGateway);
+  explicit MetricsExporter(AbstractMetricGateway* pMetricsGateway);
 
-  void exportHealthCheckMetrics(const ExchangeHealthCheckStatus &healthCheckPerExchange);
+  void exportHealthCheckMetrics(const ExchangeHealthCheckStatus& healthCheckPerExchange);
 
-  void exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency);
+  void exportBalanceMetrics(const BalancePerExchange& balancePerExchange, CurrencyCode equiCurrency);
 
-  void exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps);
+  void exportTickerMetrics(const ExchangeTickerMaps& marketOrderBookMaps);
 
-  void exportOrderbookMetrics(const MarketOrderBookConversionRates &marketOrderBookConversionRates);
+  void exportOrderbookMetrics(const MarketOrderBookConversionRates& marketOrderBookConversionRates);
 
-  void exportLastTradesMetrics(const TradesPerExchange &lastTradesPerExchange);
+  void exportLastTradesMetrics(const TradesPerExchange& lastTradesPerExchange);
 
  private:
   void createSummariesAndHistograms();
 
-  AbstractMetricGateway *_pMetricsGateway;
+  AbstractMetricGateway* _pMetricsGateway;
 };
 }  // namespace cct

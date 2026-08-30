@@ -15,9 +15,6 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -26,6 +23,9 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "kraken-schema.hpp"
 #include "market.hpp"
@@ -56,19 +56,15 @@ T PublicQuery(HttpClient& httpClient, std::string_view method, HttpPostData&& po
   });
 }
 
+bool IsStandardKrakenCurrencyCode(std::string_view currencyCode) {
+  return !currencyCode.empty() && !currencyCode.contains('.') && CurrencyCode::IsValid(currencyCode);
+}
+
 bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string_view krakenAltName,
                            const CurrencyCodeSet& excludedCurrencies, const CoincenterInfo& config) {
-  if (krakenAltName.ends_with(".HOLD")) {
-    // These are special tokens for holding
-    log::trace("Discard {} which are special tokens for holding process", krakenAltName);
-    return false;
-  }
-  if (krakenAltName.ends_with(".M")) {
-    log::trace("Discard {} which are special tokens for margin", krakenAltName);
-    return false;
-  }
-  if (krakenAltName.ends_with(".S")) {
-    log::trace("Discard {} which are special tokens for staking", krakenAltName);
+  if (!IsStandardKrakenCurrencyCode(krakenEntryCurrencyCode) || !IsStandardKrakenCurrencyCode(krakenAltName)) {
+    log::trace("Discard nonstandard Kraken currency '{}' (alternative name '{}')", krakenEntryCurrencyCode,
+               krakenAltName);
     return false;
   }
 
@@ -96,7 +92,8 @@ bool CheckCurrencyExchange(std::string_view krakenEntryCurrencyCode, std::string
 
 KrakenPublic::KrakenPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::kraken, fiatConverter, commonAPI, config),
-      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           config, commonAPI, _httpClient, exchangeConfig().asset),
@@ -161,6 +158,10 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
       continue;
     }
     std::string_view krakenBaseStr = value.base;
+    if (!IsStandardKrakenCurrencyCode(krakenBaseStr)) {
+      log::trace("Discard market {} as base currency '{}' is nonstandard", key, krakenBaseStr);
+      continue;
+    }
     CurrencyCode base(_coincenterInfo.standardizeCurrencyCode(krakenBaseStr));
     auto baseIt = currencies.find(base);
     if (baseIt == currencies.end()) {
@@ -172,6 +173,10 @@ std::pair<MarketSet, KrakenPublic::MarketsFunc::MarketInfoMap> KrakenPublic::Mar
     }
 
     std::string_view krakenQuoteStr = value.quote;
+    if (!IsStandardKrakenCurrencyCode(krakenQuoteStr)) {
+      log::trace("Discard market {} as quote currency '{}' is nonstandard", key, krakenQuoteStr);
+      continue;
+    }
     CurrencyCode quote(_coincenterInfo.standardizeCurrencyCode(krakenQuoteStr));
     auto quoteIt = currencies.find(quote);
     if (quoteIt == currencies.end()) {

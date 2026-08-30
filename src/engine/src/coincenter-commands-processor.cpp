@@ -35,29 +35,29 @@
 namespace cct {
 namespace {
 
-void FillTradeTransferableCommandResults(const TradeResultPerExchange &tradeResultPerExchange,
-                                         TransferableCommandResultVector &transferableResults) {
-  for (const auto &[exchangePtr, tradeResult] : tradeResultPerExchange) {
+void FillTradeTransferableCommandResults(const TradeResultPerExchange& tradeResultPerExchange,
+                                         TransferableCommandResultVector& transferableResults) {
+  for (const auto& [exchangePtr, tradeResult] : tradeResultPerExchange) {
     if (tradeResult.isComplete()) {
       transferableResults.emplace_back(exchangePtr->createExchangeName(), tradeResult.tradedAmounts().to);
     }
   }
 }
 
-void FillConversionTransferableCommandResults(const MonetaryAmountPerExchange &monetaryAmountPerExchange,
-                                              TransferableCommandResultVector &transferableResults) {
-  for (const auto &[exchangePtr, amount] : monetaryAmountPerExchange) {
+void FillConversionTransferableCommandResults(const MonetaryAmountPerExchange& monetaryAmountPerExchange,
+                                              TransferableCommandResultVector& transferableResults) {
+  for (const auto& [exchangePtr, amount] : monetaryAmountPerExchange) {
     transferableResults.emplace_back(exchangePtr->createExchangeName(), amount);
   }
 }
 
 }  // namespace
 
-CoincenterCommandsProcessor::CoincenterCommandsProcessor(Coincenter &coincenter)
+CoincenterCommandsProcessor::CoincenterCommandsProcessor(Coincenter& coincenter)
     : _coincenter(coincenter),
       _queryResultPrinter(coincenter.coincenterInfo().apiOutputType(), coincenter.coincenterInfo().loggingInfo()) {}
 
-int CoincenterCommandsProcessor::process(const CoincenterCommands &coincenterCommands) {
+int CoincenterCommandsProcessor::process(const CoincenterCommands& coincenterCommands) {
   const auto commands = coincenterCommands.commands();
   const int nbRepeats = commands.empty() ? 0 : coincenterCommands.repeats();
   const auto repeatTime = coincenterCommands.repeatTime();
@@ -102,7 +102,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
     std::span<const CoincenterCommand> groupedCommands,
     std::span<const TransferableCommandResult> previousTransferableResults) {
   TransferableCommandResultVector transferableResults;
-  const auto &firstCmd = groupedCommands.front();
+  const auto& firstCmd = groupedCommands.front();
   // All grouped commands have same type - logic to handle multiple commands in a group should be handled per use case
   switch (firstCmd.type()) {
     case CoincenterCommandType::HealthCheck: {
@@ -126,7 +126,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       if (firstCmd.amount().isDefault()) {
         std::array<MonetaryAmount, kNbSupportedExchanges> startAmountsPerExchangePos;
         bool oneSet = false;
-        for (const auto &transferableResult : previousTransferableResults) {
+        for (const auto& transferableResult : previousTransferableResults) {
           auto publicExchangePos = transferableResult.targetedExchange().publicExchangePos();
           if (startAmountsPerExchangePos[publicExchangePos].isDefault()) {
             startAmountsPerExchangePos[publicExchangePos] = transferableResult.resultedAmount();
@@ -146,7 +146,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
         _queryResultPrinter.printConversion(startAmountsPerExchangePos, firstCmd.cur1(), conversionPerExchange);
         FillConversionTransferableCommandResults(conversionPerExchange, transferableResults);
       } else {
-        for (const auto &exchangeName : firstCmd.exchangeNames()) {
+        for (const auto& exchangeName : firstCmd.exchangeNames()) {
           ExchangeNameEnum exchangeNameEnum = exchangeName.exchangeNameEnum();
           if (std::ranges::find(exchangeNameEnumVector, exchangeNameEnum) == exchangeNameEnumVector.end()) {
             exchangeNameEnumVector.push_back(exchangeNameEnum);
@@ -193,7 +193,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
       const auto tradedVolumePerExchange =
           _coincenter.getLast24hTradedVolumePerExchange(firstCmd.market(), firstCmd.exchangeNames());
       _queryResultPrinter.printLast24hTradedVolume(firstCmd.market(), tradedVolumePerExchange);
-      for (const auto &[exchangePtr, tradedVolume] : tradedVolumePerExchange) {
+      for (const auto& [exchangePtr, tradedVolume] : tradedVolumePerExchange) {
         transferableResults.emplace_back(exchangePtr->createExchangeName(), tradedVolume);
       }
       break;
@@ -304,11 +304,11 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
     }
     case CoincenterCommandType::MarketData: {
       std::array<Market, kNbSupportedExchanges> marketPerPublicExchange;
-      for (const auto &cmd : groupedCommands) {
+      for (const auto& cmd : groupedCommands) {
         if (cmd.exchangeNames().empty()) {
           std::ranges::fill(marketPerPublicExchange, cmd.market());
         } else {
-          for (const auto &exchangeName : cmd.exchangeNames()) {
+          for (const auto& exchangeName : cmd.exchangeNames()) {
             marketPerPublicExchange[exchangeName.publicExchangePos()] = cmd.market();
           }
         }

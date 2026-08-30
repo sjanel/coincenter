@@ -40,7 +40,7 @@ class Wallet {
   Wallet(ExchangeName exchangeName, CurrencyCode currency, string address, std::string_view tag,
          WalletCheck walletCheck, AccountOwner accountOwner);
 
-  const ExchangeName &exchangeName() const { return _exchangeName; }
+  const ExchangeName& exchangeName() const { return _exchangeName; }
 
   std::string_view address() const {
     check();
@@ -52,15 +52,15 @@ class Wallet {
     return std::string_view(startTag(), _addressAndTag.data() + _addressAndTag.size());
   }
 
-  const AccountOwner &accountOwner() const { return _accountOwner; }
+  const AccountOwner& accountOwner() const { return _accountOwner; }
 
   CurrencyCode currencyCode() const { return _currency; }
 
   bool hasTag() const { return _tagPos != std::string_view::npos; }
 
-  bool operator==(const Wallet &) const noexcept = default;
+  bool operator==(const Wallet&) const noexcept = default;
 
-  static bool ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchangeName, CurrencyCode currency,
+  static bool ValidateWallet(WalletCheck walletCheck, const ExchangeName& exchangeName, CurrencyCode currency,
                              std::string_view expectedAddress, std::string_view expectedTag);
 
   using trivially_relocatable =
@@ -68,7 +68,7 @@ class Wallet {
                          is_trivially_relocatable_v<AccountOwner> >::type;
 
  private:
-  const char *startTag() const { return _addressAndTag.data() + (hasTag() ? _tagPos : _addressAndTag.size()); }
+  const char* startTag() const { return _addressAndTag.data() + (hasTag() ? _tagPos : _addressAndTag.size()); }
 
   void check() const {
     if (_addressAndTag.empty()) {
@@ -88,7 +88,7 @@ class Wallet {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::Wallet> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -98,7 +98,7 @@ struct fmt::formatter<cct::Wallet> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::Wallet &w, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::Wallet& w, FormatContext& ctx) const -> decltype(ctx.out()) {
     bool hasTag = w.hasTag();
     return fmt::format_to(ctx.out(), "{:n} wallet of {} [{}{}{}]", w.exchangeName(), w.currencyCode(), w.address(),
                           hasTag ? "," : "", hasTag ? w.tag() : "");

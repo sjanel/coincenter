@@ -49,10 +49,10 @@ class FlatKeyValueStringIterator {
     }
 
     /// end()
-    explicit FlatKeyValueIteratorValue(const char *endData)
+    explicit FlatKeyValueIteratorValue(const char* endData)
         : _begKey(endData), _begValue(nullptr), _endValue(nullptr) {}
 
-    void incr(const char *endData) {
+    void incr(const char* endData) {
       if (_endValue == endData) {
         // reached the end
         _begKey = _endValue;
@@ -95,9 +95,9 @@ class FlatKeyValueStringIterator {
       }
     }
 
-    const char *_begKey;
-    const char *_begValue;
-    const char *_endValue;
+    const char* _begKey;
+    const char* _begValue;
+    const char* _endValue;
   };
 
  public:
@@ -105,11 +105,11 @@ class FlatKeyValueStringIterator {
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = FlatKeyValueIteratorValue;
   using difference_type = std::ptrdiff_t;
-  using pointer = const value_type *;
-  using reference = const value_type &;
+  using pointer = const value_type*;
+  using reference = const value_type&;
 
   // Prefix increment, should be called on a valid iterator, otherwise undefined behavior
-  FlatKeyValueStringIterator &operator++() {
+  FlatKeyValueStringIterator& operator++() {
     _value.incr(_data.data() + _data.size());
     return *this;
   }
@@ -122,7 +122,7 @@ class FlatKeyValueStringIterator {
   }
 
   // Prefix decrement, should be called on a valid iterator (in range (begin(), end()]), otherwise undefined behavior
-  FlatKeyValueStringIterator &operator--() {
+  FlatKeyValueStringIterator& operator--() {
     _value.decr(_data);
     return *this;
   }
@@ -138,8 +138,8 @@ class FlatKeyValueStringIterator {
 
   pointer operator->() const { return &this->operator*(); }
 
-  bool operator==(const FlatKeyValueStringIterator &rhs) const noexcept { return _value._begKey == rhs._value._begKey; }
-  bool operator!=(const FlatKeyValueStringIterator &rhs) const noexcept { return !(*this == rhs); }
+  bool operator==(const FlatKeyValueStringIterator& rhs) const noexcept { return _value._begKey == rhs._value._begKey; }
+  bool operator!=(const FlatKeyValueStringIterator& rhs) const noexcept { return !(*this == rhs); }
 
  private:
   template <char, char>

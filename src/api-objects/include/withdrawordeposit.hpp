@@ -20,7 +20,7 @@ class WithdrawOrDeposit {
   };
 
   template <class StringType>
-  WithdrawOrDeposit(StringType &&id, TimePoint time, MonetaryAmount amount, Status status)
+  WithdrawOrDeposit(StringType&& id, TimePoint time, MonetaryAmount amount, Status status)
       : _time(time), _id(std::forward<StringType>(id)), _amount(amount), _status(status) {}
 
   TimePoint time() const { return _time; }
@@ -36,7 +36,7 @@ class WithdrawOrDeposit {
   string timeStr() const;
 
   /// default ordering by received time first
-  auto operator<=>(const WithdrawOrDeposit &) const = default;
+  auto operator<=>(const WithdrawOrDeposit&) const = default;
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 

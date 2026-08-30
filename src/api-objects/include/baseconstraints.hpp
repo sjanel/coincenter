@@ -26,7 +26,7 @@ class CurrencyIdTimeConstraintsBmp {
 
   bool isDepositIdOnlyDependent() const { return _bmp == kIdConstrained; }
 
-  bool operator==(const CurrencyIdTimeConstraintsBmp &) const noexcept = default;
+  bool operator==(const CurrencyIdTimeConstraintsBmp&) const noexcept = default;
 
  private:
   uint8_t _bmp{};

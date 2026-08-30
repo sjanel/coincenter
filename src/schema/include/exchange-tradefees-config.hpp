@@ -13,7 +13,7 @@ namespace details {
 template <bool Optional>
 struct ExchangeTradeFeesConfig {
   template <class T>
-  void mergeWith(const T &other)
+  void mergeWith(const T& other)
     requires(std::is_same_v<T, ExchangeTradeFeesConfig<true>> && !Optional)
   {
     if (other.maker) {

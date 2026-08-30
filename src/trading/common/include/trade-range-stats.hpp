@@ -7,11 +7,11 @@
 namespace cct {
 
 struct TradeRangeResultsStats {
-  TradeRangeResultsStats operator+(const TradeRangeResultsStats &rhs) const {
+  TradeRangeResultsStats operator+(const TradeRangeResultsStats& rhs) const {
     return {timeWindow.aggregateMinMax(rhs.timeWindow), nbSuccessful + rhs.nbSuccessful, nbError + rhs.nbError};
   }
 
-  TradeRangeResultsStats &operator+=(const TradeRangeResultsStats &rhs) { return *this = *this + rhs; }
+  TradeRangeResultsStats& operator+=(const TradeRangeResultsStats& rhs) { return *this = *this + rhs; }
 
   TimeWindow timeWindow;
   int32_t nbSuccessful{};
@@ -19,11 +19,11 @@ struct TradeRangeResultsStats {
 };
 
 struct TradeRangeStats {
-  TradeRangeStats operator+(const TradeRangeStats &rhs) const {
+  TradeRangeStats operator+(const TradeRangeStats& rhs) const {
     return {marketOrderBookStats + rhs.marketOrderBookStats, publicTradeStats + rhs.publicTradeStats};
   }
 
-  TradeRangeStats &operator+=(const TradeRangeStats &rhs) { return *this = *this + rhs; }
+  TradeRangeStats& operator+=(const TradeRangeStats& rhs) { return *this = *this + rhs; }
 
   TradeRangeResultsStats marketOrderBookStats;
   TradeRangeResultsStats publicTradeStats;

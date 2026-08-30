@@ -9,7 +9,7 @@ namespace cct::schema {
 struct ExchangeAssetConfig {
   using trivially_relocatable = is_trivially_relocatable<CurrencyCodeSet>::type;
 
-  void mergeWith(const ExchangeAssetConfig &other) {
+  void mergeWith(const ExchangeAssetConfig& other) {
     allExclude.insert(other.allExclude.begin(), other.allExclude.end());
     preferredPaymentCurrencies.insert(preferredPaymentCurrencies.begin(), other.preferredPaymentCurrencies.begin(),
                                       other.preferredPaymentCurrencies.end());

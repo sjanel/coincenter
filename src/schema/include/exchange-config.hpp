@@ -49,13 +49,13 @@ class AllExchangeConfigs {
  public:
   AllExchangeConfigs() = default;
 
-  explicit AllExchangeConfigs(const LoadConfiguration &loadConfiguration);
+  explicit AllExchangeConfigs(const LoadConfiguration& loadConfiguration);
 
-  const schema::ExchangeConfig &operator[](ExchangeNameEnum exchangeNameEnum) const {
+  const schema::ExchangeConfig& operator[](ExchangeNameEnum exchangeNameEnum) const {
     return _exchangeConfigs[static_cast<int>(exchangeNameEnum)];
   }
 
-  void mergeWith(schema::details::AllExchangeConfigsOptional &other);
+  void mergeWith(schema::details::AllExchangeConfigsOptional& other);
 
  private:
   std::array<schema::ExchangeConfig, kNbSupportedExchanges> _exchangeConfigs;

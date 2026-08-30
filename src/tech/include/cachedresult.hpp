@@ -20,7 +20,7 @@ class CachedResultOptionsT {
  public:
   explicit CachedResultOptionsT(DurationT refreshPeriod) : _refreshPeriod(refreshPeriod) {}
 
-  CachedResultOptionsT(DurationT refreshPeriod, CachedResultVaultT<DurationT> &cacheResultVault)
+  CachedResultOptionsT(DurationT refreshPeriod, CachedResultVaultT<DurationT>& cacheResultVault)
       : _refreshPeriod(refreshPeriod), _pCacheResultVault(std::addressof(cacheResultVault)) {}
 
  private:
@@ -31,7 +31,7 @@ class CachedResultOptionsT {
   friend class CachedResultWithoutArgs;
 
   DurationT _refreshPeriod;
-  CachedResultVaultT<DurationT> *_pCacheResultVault = nullptr;
+  CachedResultVaultT<DurationT>* _pCacheResultVault = nullptr;
 };
 }  // namespace details
 
@@ -52,10 +52,10 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
 
   struct Value {
     template <class R>
-    Value(R &&result, TimePoint lastUpdatedTs) : _result(std::forward<R>(result)), _lastUpdatedTs(lastUpdatedTs) {}
+    Value(R&& result, TimePoint lastUpdatedTs) : _result(std::forward<R>(result)), _lastUpdatedTs(lastUpdatedTs) {}
 
     template <class F, class K>
-    Value(F &func, K &&key, TimePoint lastUpdatedTs)
+    Value(F& func, K&& key, TimePoint lastUpdatedTs)
         : _result(std::apply(func, std::forward<K>(key))), _lastUpdatedTs(lastUpdatedTs) {}
 
     ResultType _result;
@@ -64,17 +64,17 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
 
  public:
   template <class... TArgs>
-  explicit CachedResultWithArgs(CachedResultOptionsT<Duration> opts, TArgs &&...args)
-      : CachedResultBase<Duration>(opts._refreshPeriod), _func(std::forward<TArgs &&>(args)...) {
+  explicit CachedResultWithArgs(CachedResultOptionsT<Duration> opts, TArgs&&... args)
+      : CachedResultBase<Duration>(opts._refreshPeriod), _func(std::forward<TArgs&&>(args)...) {
     if (opts._pCacheResultVault) {
       opts._pCacheResultVault->registerCachedResult(*this);
     }
   }
 
-  CachedResultWithArgs(const CachedResultWithArgs &) = delete;
-  CachedResultWithArgs(CachedResultWithArgs &&) = delete;
-  CachedResultWithArgs &operator=(const CachedResultWithArgs &) = delete;
-  CachedResultWithArgs &operator=(CachedResultWithArgs &&) = delete;
+  CachedResultWithArgs(const CachedResultWithArgs&) = delete;
+  CachedResultWithArgs(CachedResultWithArgs&&) = delete;
+  CachedResultWithArgs& operator=(const CachedResultWithArgs&) = delete;
+  CachedResultWithArgs& operator=(CachedResultWithArgs&&) = delete;
 
   ~CachedResultWithArgs() = default;
 
@@ -83,11 +83,11 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
   /// refresh period is not checked, if given timestamp is more recent than the one associated to given value, cache
   /// will be updated.
   template <class ResultTypeT, class... Args>
-  void set(ResultTypeT &&val, TimePoint timePoint, Args &&...funcArgs) {
+  void set(ResultTypeT&& val, TimePoint timePoint, Args&&... funcArgs) {
     checkPeriodicRehash();
 
     auto [it, isInserted] =
-        _data.try_emplace(TKey(std::forward<Args &&>(funcArgs)...), std::forward<ResultTypeT>(val), timePoint);
+        _data.try_emplace(TKey(std::forward<Args&&>(funcArgs)...), std::forward<ResultTypeT>(val), timePoint);
     if (!isInserted && it->second._lastUpdatedTs < timePoint) {
       it->second = Value(std::forward<ResultTypeT>(val), timePoint);
     }
@@ -96,7 +96,7 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
   /// Get the latest value associated to the key built with given parameters.
   /// If the value is too old according to refresh period, it will be recomputed automatically.
   template <class... Args>
-  const ResultType &get(Args &&...funcArgs) {
+  const ResultType& get(Args&&... funcArgs) {
     const auto nowTime = ClockT::now();
 
     if (this->_state == State::kForceUniqueRefresh) {
@@ -107,8 +107,8 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
       checkPeriodicRehash();
     }
 
-    const auto flattenTuple = [this](auto &&...values) { return _func(std::forward<decltype(values) &&>(values)...); };
-    TKey key(std::forward<Args &&>(funcArgs)...);
+    const auto flattenTuple = [this](auto&&... values) { return _func(std::forward<decltype(values)&&>(values)...); };
+    TKey key(std::forward<Args&&>(funcArgs)...);
     auto [it, isInserted] = _data.try_emplace(key, flattenTuple, key, nowTime);
     if (!isInserted && this->_state != State::kForceCache &&
         // less or equal to make sure value is always refreshed for a zero refresh period
@@ -121,8 +121,8 @@ class CachedResultWithArgs : public CachedResultBase<typename ClockT::duration> 
   /// Retrieve a {pointer, lastUpdateTime} to latest value associated to the key built with given parameters.
   /// If no value has been computed for this key, returns a nullptr.
   template <class... Args>
-  std::pair<const ResultType *, TimePoint> retrieve(Args &&...funcArgs) const {
-    auto it = _data.find(TKey(std::forward<Args &&>(funcArgs)...));
+  std::pair<const ResultType*, TimePoint> retrieve(Args&&... funcArgs) const {
+    auto it = _data.find(TKey(std::forward<Args&&>(funcArgs)...));
     if (it == _data.end()) {
       return {};
     }
@@ -166,23 +166,23 @@ class CachedResultWithoutArgs : public CachedResultBase<typename ClockT::duratio
   using State = CachedResultBase<Duration>::State;
 
   template <class... TArgs>
-  explicit CachedResultWithoutArgs(CachedResultOptionsT<Duration> opts, TArgs &&...args)
-      : CachedResultBase<Duration>(opts._refreshPeriod), _func(std::forward<TArgs &&>(args)...) {
+  explicit CachedResultWithoutArgs(CachedResultOptionsT<Duration> opts, TArgs&&... args)
+      : CachedResultBase<Duration>(opts._refreshPeriod), _func(std::forward<TArgs&&>(args)...) {
     if (opts._pCacheResultVault) {
       opts._pCacheResultVault->registerCachedResult(*this);
     }
   }
 
-  CachedResultWithoutArgs(const CachedResultWithoutArgs &) = delete;
-  CachedResultWithoutArgs(CachedResultWithoutArgs &&) = delete;
-  CachedResultWithoutArgs &operator=(const CachedResultWithoutArgs &) = delete;
-  CachedResultWithoutArgs &operator=(CachedResultWithoutArgs &&) = delete;
+  CachedResultWithoutArgs(const CachedResultWithoutArgs&) = delete;
+  CachedResultWithoutArgs(CachedResultWithoutArgs&&) = delete;
+  CachedResultWithoutArgs& operator=(const CachedResultWithoutArgs&) = delete;
+  CachedResultWithoutArgs& operator=(CachedResultWithoutArgs&&) = delete;
 
   ~CachedResultWithoutArgs() = default;
 
   /// Sets given value for given time stamp, if time stamp currently associated to last value is older.
   template <class ResultTypeT>
-  void set(ResultTypeT &&val, TimePoint timePoint) {
+  void set(ResultTypeT&& val, TimePoint timePoint) {
     if (_lastUpdatedTs < timePoint) {
       if (isResultConstructed()) {
         _resultStorage.front() = std::forward<ResultTypeT>(val);
@@ -196,7 +196,7 @@ class CachedResultWithoutArgs : public CachedResultBase<typename ClockT::duratio
 
   /// Get the latest value.
   /// If the value is too old according to refresh period, it will be recomputed automatically.
-  const ResultType &get() {
+  const ResultType& get() {
     const auto nowTime = ClockT::now();
 
     if (this->_state == State::kForceUniqueRefresh) {
@@ -206,9 +206,7 @@ class CachedResultWithoutArgs : public CachedResultBase<typename ClockT::duratio
 
     if (_resultStorage.empty() || (this->_refreshPeriod < nowTime - _lastUpdatedTs &&
                                    (this->_state != State::kForceCache || _lastUpdatedTs == TimePoint{}))) {
-      const auto flattenTuple = [this](auto &&...values) {
-        return _func(std::forward<decltype(values) &&>(values)...);
-      };
+      const auto flattenTuple = [this](auto&&... values) { return _func(std::forward<decltype(values)&&>(values)...); };
 
       static constexpr auto kEmptyTuple = std::make_tuple();
       _resultStorage.assign(static_cast<decltype(_resultStorage)::size_type>(1), std::apply(flattenTuple, kEmptyTuple));
@@ -220,7 +218,7 @@ class CachedResultWithoutArgs : public CachedResultBase<typename ClockT::duratio
 
   /// Retrieve a {pointer, lastUpdateTime} to latest value stored in this cache.
   /// If no value has been computed, returns a nullptr.
-  std::pair<const ResultType *, TimePoint> retrieve() const {
+  std::pair<const ResultType*, TimePoint> retrieve() const {
     return {isResultConstructed() ? _resultStorage.data() : nullptr, _lastUpdatedTs};
   }
 

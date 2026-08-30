@@ -52,7 +52,7 @@ struct Markets {
     } opt;
   } in;
 
-  FixedCapacityVector<std::pair<ExchangeNameEnum, const MarketSet &>, kNbSupportedExchanges> out;
+  FixedCapacityVector<std::pair<ExchangeNameEnum, const MarketSet&>, kNbSupportedExchanges> out;
 };
 
 struct MarketsForReplay {
@@ -67,7 +67,7 @@ struct MarketsForReplay {
     struct Elem {
       using trivially_relocatable = is_trivially_relocatable<string>::type;
 
-      auto operator<=>(const Elem &) const = default;
+      auto operator<=>(const Elem&) const = default;
 
       Market market;
       string lastTimestamp;
@@ -112,7 +112,7 @@ struct MarketOrderBooks {
 
   struct ExchangePart {
     struct AskOrBid {
-      auto operator<=>(const AskOrBid &) const = default;
+      auto operator<=>(const AskOrBid&) const = default;
 
       MonetaryAmount a;
       MonetaryAmount p;
@@ -137,7 +137,7 @@ struct Balance {
 
   struct Out {
     struct CurrencyPart {
-      auto operator<=>(const CurrencyPart &) const = default;
+      auto operator<=>(const CurrencyPart&) const = default;
 
       MonetaryAmount a;
       std::optional<MonetaryAmount> eq;
@@ -229,7 +229,7 @@ struct Orders {
   } in;
 
   struct Order {
-    auto operator<=>(const Order &) const = default;
+    auto operator<=>(const Order&) const = default;
 
     std::string_view id;
     Market pair;
@@ -331,7 +331,7 @@ struct Conversion2 {
     CoincenterCommandType req = CoincenterCommandType::Conversion;
     struct Opt {
       struct ExchangePart {
-        auto operator<=>(const ExchangePart &) const = default;
+        auto operator<=>(const ExchangePart&) const = default;
 
         MonetaryAmount amount;
         CurrencyCode cur;
@@ -467,7 +467,7 @@ struct DustSweeper {
 
   struct ExchangeKeyPart {
     struct TradedAmounts {
-      auto operator<=>(const TradedAmounts &) const = default;
+      auto operator<=>(const TradedAmounts&) const = default;
 
       MonetaryAmount from;
       MonetaryAmount to;

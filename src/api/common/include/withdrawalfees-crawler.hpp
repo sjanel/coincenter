@@ -1,14 +1,15 @@
 #pragma once
 
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 
 #include "cache-file-updator-interface.hpp"
 #include "cachedresult.hpp"
 #include "cachedresultvault.hpp"
-#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "exchange-name-enum.hpp"
+#include "httpclient.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "timedef.hpp"
@@ -17,8 +18,12 @@ namespace cct {
 
 class CoincenterInfo;
 
-/// This class is able to crawl some public withdrawal fees web pages in order to retrieve them from unofficial sources,
-/// which is better than nothing. This class is non thread-safe.
+namespace api {
+class WithdrawalFeesCrawlerTest;
+}
+
+/// Retrieves public withdrawal fee schedules for exchanges whose regular public APIs do not expose them.
+/// This class is non thread-safe.
 class WithdrawalFeesCrawler : public CacheFileUpdatorInterface {
  public:
   WithdrawalFeesCrawler(const CoincenterInfo& coincenterInfo, Duration minDurationBetweenQueries,
@@ -34,6 +39,11 @@ class WithdrawalFeesCrawler : public CacheFileUpdatorInterface {
   void updateCacheFile() const override;
 
  private:
+  friend class api::WithdrawalFeesCrawlerTest;
+
+  static WithdrawalInfoMaps ParseBithumbResponse(std::string_view dataStr);
+  static WithdrawalInfoMaps ParseKrakenResponse(std::string_view dataStr);
+
   class WithdrawalFeesFunc {
    public:
     explicit WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo);
@@ -41,9 +51,6 @@ class WithdrawalFeesCrawler : public CacheFileUpdatorInterface {
     WithdrawalInfoMaps operator()(ExchangeNameEnum exchangeNameEnum);
 
    private:
-    WithdrawalInfoMaps get1(ExchangeNameEnum exchangeNameEnum);
-    WithdrawalInfoMaps get2(ExchangeNameEnum exchangeNameEnum);
-
     HttpClient _httpClient;
   };
 

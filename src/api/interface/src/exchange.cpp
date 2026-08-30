@@ -14,10 +14,10 @@
 
 namespace cct {
 
-Exchange::Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic)
+Exchange::Exchange(const schema::ExchangeConfig& exchangeConfig, ExchangePublic& exchangePublic)
     : Exchange(exchangeConfig, exchangePublic, std::unique_ptr<ExchangePrivate>()) {}
 
-Exchange::Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
+Exchange::Exchange(const schema::ExchangeConfig& exchangeConfig, ExchangePublic& exchangePublic,
                    std::unique_ptr<ExchangePrivate> exchangePrivate)
     : _pExchangePublic(std::addressof(exchangePublic)),
       _exchangePrivate(std::move(exchangePrivate)),
@@ -25,7 +25,7 @@ Exchange::Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic 
 
 std::size_t Exchange::publicExchangePos() const { return static_cast<std::size_t>(exchangeNameEnum()); }
 
-bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
+bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const {
   if (_pExchangeConfig->asset.withdrawExclude.contains(currencyCode)) {
     return false;
   }
@@ -37,7 +37,7 @@ bool Exchange::canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlat
   return lb->canWithdraw();
 }
 
-bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const {
+bool Exchange::canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const {
   const auto lb = currencyExchangeSet.find(currencyCode);
   if (lb == currencyExchangeSet.end()) {
     log::trace("{} cannot be deposited on {}", currencyCode, name());

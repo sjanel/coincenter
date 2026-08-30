@@ -4,10 +4,10 @@
 
 #include "binance-common-schema.hpp"
 #include "cachedresult.hpp"
-#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "httpclient.hpp"
 #include "monetaryamount.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "runmodes.hpp"
@@ -35,8 +35,8 @@ class BinanceGlobalInfos {
 
   class BinanceGlobalInfosFunc {
    public:
-    BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway, const PermanentRequestOptions& permanentHttpRequestOptions,
-                           settings::RunMode runMode);
+    BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway,
+                           const PermanentRequestOptions& permanentHttpRequestOptions, settings::RunMode runMode);
 
     schema::binance::NetworkCoinDataVector operator()();
 

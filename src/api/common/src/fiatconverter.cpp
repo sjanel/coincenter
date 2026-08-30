@@ -10,10 +10,10 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
-#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "fiats-converter-responses-schema.hpp"
 #include "file.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "permanentrequestoptions.hpp"
@@ -83,7 +83,8 @@ std::optional<double> FiatConverter::queryCurrencyRate(Market market) {
 std::optional<double> FiatConverter::queryCurrencyRateSource1(Market market) {
   const auto qStr = market.assetsPairStrUpper('_');
 
-  const HttpRequestOptions opts(HttpRequestType::kGet, {{"q", qStr}, {"apiKey", _thirdPartySecret.freecurrencyconverter}});
+  const HttpRequestOptions opts(HttpRequestType::kGet,
+                                {{"q", qStr}, {"apiKey", _thirdPartySecret.freecurrencyconverter}});
 
   const auto dataStr = _httpClient.query(kFiatConverterSource1Url, opts);
 

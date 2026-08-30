@@ -23,9 +23,6 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
@@ -33,6 +30,9 @@
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "huobi-schema.hpp"
 #include "huobipublicapi.hpp"
@@ -164,8 +164,8 @@ constexpr std::string_view kBaseUrlOrders = "/v1/order/orders/";
 
 HuobiPrivate::HuobiPrivate(const CoincenterInfo& coincenterInfo, HuobiPublic& huobiPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, huobiPublic, apiKey),
-      _httpClient(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
-                  coincenterInfo.getRunMode()),
+      _httpClient(HuobiPublic::kURLBases, coincenterInfo.metricGatewayPtr(),
+                  permanentHttpRequestOptionsBuilder().build(), coincenterInfo.getRunMode()),
       _accountIdCache(CachedResultOptions(std::chrono::hours(48), _cachedResultVault), _httpClient, apiKey),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),

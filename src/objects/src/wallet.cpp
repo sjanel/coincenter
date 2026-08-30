@@ -16,7 +16,7 @@
 namespace cct {
 
 /// Test existence of deposit address (and optional tag) in the trusted deposit addresses file.
-bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchangeName, CurrencyCode currency,
+bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName& exchangeName, CurrencyCode currency,
                             std::string_view expectedAddress, std::string_view expectedTag) {
   if (!walletCheck.doCheck()) {
     log::debug("No wallet validation from file, consider OK");
@@ -28,9 +28,9 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
     log::warn("No deposit addresses found in {} for {}", kDepositAddressesFileName, exchangeName);
     return false;
   }
-  const auto &exchangeDepositAddresses = exchangeNameIt->second;
+  const auto& exchangeDepositAddresses = exchangeNameIt->second;
   bool uniqueKeyName = true;
-  for (const auto &[privateExchangeKeyName, accountDepositAddresses] : exchangeDepositAddresses) {
+  for (const auto& [privateExchangeKeyName, accountDepositAddresses] : exchangeDepositAddresses) {
     if (exchangeName.keyName().empty()) {
       if (!uniqueKeyName) {
         log::error("Several key names found for exchange {:n}. Specify a key name to remove ambiguity", exchangeName);
@@ -41,7 +41,7 @@ bool Wallet::ValidateWallet(WalletCheck walletCheck, const ExchangeName &exchang
     } else if (exchangeName.keyName() != privateExchangeKeyName) {
       continue;
     }
-    for (const auto &[currencyCode, addressAndTag] : accountDepositAddresses) {
+    for (const auto& [currencyCode, addressAndTag] : accountDepositAddresses) {
       if (currencyCode == currency) {
         auto tagPos = addressAndTag.find(',');
         std::string_view address(addressAndTag.begin(), addressAndTag.begin() + std::min(tagPos, addressAndTag.size()));

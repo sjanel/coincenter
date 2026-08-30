@@ -9,7 +9,7 @@
 
 namespace cct {
 WithdrawsOrDepositsConstraints::WithdrawsOrDepositsConstraints(CurrencyCode currencyCode, Duration minAge,
-                                                               Duration maxAge, IdSet &&idSet)
+                                                               Duration maxAge, IdSet&& idSet)
     : _idSet(std::move(idSet)), _currencyCode(currencyCode) {
   if (!_idSet.empty()) {
     _currencyIdTimeConstraintsBmp.set(CurrencyIdTimeConstraintsBmp::ConstraintType::kId);

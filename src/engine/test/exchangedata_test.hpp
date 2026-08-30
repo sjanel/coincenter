@@ -17,8 +17,8 @@ namespace cct {
 
 class ExchangesBaseTest : public ::testing::Test {
  protected:
-  static api::MockExchangePrivate &ExchangePrivate(Exchange &exchange) {
-    return dynamic_cast<api::MockExchangePrivate &>(exchange.apiPrivate());
+  static api::MockExchangePrivate& ExchangePrivate(Exchange& exchange) {
+    return dynamic_cast<api::MockExchangePrivate&>(exchange.apiPrivate());
   }
 
   void SetUp() override {

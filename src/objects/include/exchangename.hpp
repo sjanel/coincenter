@@ -45,10 +45,10 @@ class ExchangeName {
 
   std::string_view str() const { return _nameWithKey; }
 
-  bool operator==(const ExchangeName &) const noexcept = default;
-  std::strong_ordering operator<=>(const ExchangeName &) const noexcept = default;
+  bool operator==(const ExchangeName&) const noexcept = default;
+  std::strong_ordering operator<=>(const ExchangeName&) const noexcept = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const ExchangeName &en) { return os << en.str(); }
+  friend std::ostream& operator<<(std::ostream& os, const ExchangeName& en) { return os << en.str(); }
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
@@ -74,7 +74,7 @@ struct fmt::formatter<cct::ExchangeName> {
   bool printExchangeName = false;
   bool printKeyName = false;
 
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     auto it = ctx.begin();
     const auto end = ctx.end();
     if (it == end || *it == '}') {
@@ -103,7 +103,7 @@ struct fmt::formatter<cct::ExchangeName> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::ExchangeName &exchangeName, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::ExchangeName& exchangeName, FormatContext& ctx) const -> decltype(ctx.out()) {
     if (printExchangeName) {
       ctx.out() = fmt::format_to(ctx.out(), "{}", exchangeName.name());
     }

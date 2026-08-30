@@ -13,6 +13,6 @@ using ExchangeQueryUpdateFrequencyConfig =
     FixedCapacityVector<std::pair<QueryType, Duration>, json::reflect<QueryType>::size>;
 
 // Merge src into des update durations  by keeping the minimum duration. May modify src order.
-void MergeWith(ExchangeQueryUpdateFrequencyConfig &src, ExchangeQueryUpdateFrequencyConfig &des);
+void MergeWith(ExchangeQueryUpdateFrequencyConfig& src, ExchangeQueryUpdateFrequencyConfig& des);
 
 }  // namespace cct::schema

@@ -12,7 +12,7 @@
 namespace cct {
 
 namespace details {
-inline void B64EncodeImpl(std::span<const char> binData, char *out, char *endOut) {
+inline void B64EncodeImpl(std::span<const char> binData, char* out, char* endOut) {
   int bitsCollected{};
   uint32_t accumulator{};
 
@@ -45,7 +45,7 @@ constexpr auto B64EncodedLen(auto binDataLen) { return static_cast<std::size_t>(
   details::B64EncodeImpl(binData, ret.data(), ret.data() + ret.size());
   return ret;
 }
-string B64Encode(const char *) = delete;
+string B64Encode(const char*) = delete;
 
 template <std::size_t N>
 [[nodiscard]] auto B64Encode(const char (&binData)[N]) {
@@ -55,13 +55,13 @@ template <std::size_t N>
 }
 
 template <std::size_t N>
-[[nodiscard]] auto B64Encode(const std::array<char, N> &binData) {
+[[nodiscard]] auto B64Encode(const std::array<char, N>& binData) {
   std::array<char, details::B64EncodedLen(N)> ret;
   details::B64EncodeImpl(binData, ret.data(), ret.data() + ret.size());
   return ret;
 }
 
 [[nodiscard]] string B64Decode(std::span<const char> ascData);
-string B64Decode(const char *) = delete;
+string B64Decode(const char*) = delete;
 
 }  // namespace cct

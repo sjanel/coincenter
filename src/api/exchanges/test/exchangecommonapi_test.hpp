@@ -24,7 +24,7 @@ class TestAPI {
  public:
   TestAPI() { createPrivateExchangeIfKeyPresent(); }
 
-  static MarketSet ComputeMarketSetSample(const MarketSet &markets, const CurrencyExchangeFlatSet &currencies) {
+  static MarketSet ComputeMarketSetSample(const MarketSet& markets, const CurrencyExchangeFlatSet& currencies) {
     static constexpr int kNbSamples = 1;
     MarketSet consideredMarkets;
     std::ranges::copy_if(markets, std::inserter(consideredMarkets, consideredMarkets.end()), [&currencies](Market mk) {
@@ -38,11 +38,11 @@ class TestAPI {
     return sampleMarkets;
   }
 
-  static CurrencyExchangeFlatSet ComputeCurrencyExchangeSample(const MarketSet &markets,
-                                                               const CurrencyExchangeFlatSet &currencies) {
+  static CurrencyExchangeFlatSet ComputeCurrencyExchangeSample(const MarketSet& markets,
+                                                               const CurrencyExchangeFlatSet& currencies) {
     CurrencyExchangeFlatSet currencyToKeep;
     std::ranges::copy_if(
-        currencies, std::inserter(currencyToKeep, currencyToKeep.end()), [&](const CurrencyExchange &curEx) {
+        currencies, std::inserter(currencyToKeep, currencyToKeep.end()), [&](const CurrencyExchange& curEx) {
           return !curEx.isFiat() &&
                  std::ranges::any_of(markets, [&curEx](Market mk) { return mk.canTrade(curEx.standardCode()); });
         });
@@ -77,7 +77,7 @@ class TestAPI {
     currencies =
         exchangePrivateOpt ? exchangePrivateOpt->queryTradableCurrencies() : exchangePublic.queryTradableCurrencies();
     ASSERT_FALSE(currencies.empty());
-    EXPECT_TRUE(std::ranges::none_of(currencies, [](const auto &cur) { return cur.standardCode().str().empty(); }));
+    EXPECT_TRUE(std::ranges::none_of(currencies, [](const auto& cur) { return cur.standardCode().str().empty(); }));
 
     // Uncomment below code to print updated Upbit withdrawal fees for static data of withdrawal fees of public API
     // if (exchangePrivateOpt) {
@@ -140,7 +140,7 @@ class TestAPI {
     }
     CurrencyExchangeFlatSet withdrawableCryptos;
     std::ranges::copy_if(currencies, std::inserter(withdrawableCryptos, withdrawableCryptos.end()),
-                         [this](const CurrencyExchange &curEx) {
+                         [this](const CurrencyExchange& curEx) {
                            return !curEx.isFiat() && curEx.canWithdraw() &&
                                   std::ranges::any_of(
                                       markets, [&curEx](Market mk) { return mk.canTrade(curEx.standardCode()); });
@@ -159,7 +159,7 @@ class TestAPI {
       MonetaryAmountByCurrencySet withdrawalFees =
           exchangePrivateOpt ? exchangePrivateOpt->queryWithdrawalFees() : exchangePublic.queryWithdrawalFees();
 
-      for (const CurrencyExchange &curExchange : sample) {
+      for (const CurrencyExchange& curExchange : sample) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Withdrawal fee test", cur);
         auto withdrawalFeeIt = withdrawalFees.find(cur);
@@ -191,7 +191,7 @@ class TestAPI {
     if (exchangePrivateOpt) {
       CurrencyExchangeFlatSet depositableCryptos;
       std::ranges::copy_if(
-          currencies, std::inserter(depositableCryptos, depositableCryptos.end()), [this](const CurrencyExchange &c) {
+          currencies, std::inserter(depositableCryptos, depositableCryptos.end()), [this](const CurrencyExchange& c) {
             return !c.isFiat() && c.canDeposit() &&
                    std::ranges::any_of(markets, [&c](Market mk) { return mk.canTrade(c.standardCode()); });
           });
@@ -201,14 +201,14 @@ class TestAPI {
         std::ranges::sample(depositableCryptos, std::inserter(sample, sample.end()), nbSamples,
                             std::mt19937{std::random_device{}()});
 
-        for (const CurrencyExchange &curExchange : sample) {
+        for (const CurrencyExchange& curExchange : sample) {
           CurrencyCode cur(curExchange.standardCode());
           log::info("Choosing {} as random currency code for Deposit wallet test", cur);
           try {
             Wallet wallet = exchangePrivateOpt->queryDepositWallet(cur);
             EXPECT_FALSE(wallet.address().empty());
             break;
-          } catch (const exception &) {
+          } catch (const exception&) {
             if (exchangePrivateOpt->canGenerateDepositAddress()) {
               throw;
             }
@@ -229,7 +229,7 @@ class TestAPI {
       const auto openedOrders = exchangePrivateOpt->queryOpenedOrders(OrdersConstraints(mk.base()));
       const auto closedOrders = exchangePrivateOpt->queryClosedOrders(OrdersConstraints(mk.base()));
 
-      const Order *pOrder = nullptr;
+      const Order* pOrder = nullptr;
       if (!openedOrders.empty()) {
         pOrder = &openedOrders.front();
       } else if (!closedOrders.empty()) {
@@ -248,7 +248,7 @@ class TestAPI {
       return;
     }
     if (exchangePrivateOpt) {
-      for (const CurrencyExchange &curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
+      for (const CurrencyExchange& curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Recent deposits test", cur);
         DepositsSet deposits = exchangePrivateOpt->queryRecentDeposits(DepositsConstraints(cur));
@@ -265,7 +265,7 @@ class TestAPI {
       return;
     }
     if (exchangePrivateOpt) {
-      for (const CurrencyExchange &curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
+      for (const CurrencyExchange& curExchange : ComputeCurrencyExchangeSample(markets, currencies)) {
         CurrencyCode cur(curExchange.standardCode());
         log::info("Choosing {} as random currency code for Recent withdraws test", cur);
         WithdrawsSet withdraws = exchangePrivateOpt->queryRecentWithdraws(WithdrawsConstraints(cur));
@@ -285,7 +285,7 @@ class TestAPI {
       Market mk = sampleMarkets.front();
       PublicTradeVector lastTrades = exchangePublic.queryLastTrades(mk);
       if (!lastTrades.empty() && exchangePrivateOpt) {
-        auto compareTradedVolume = [](const PublicTrade &lhs, const PublicTrade &rhs) {
+        auto compareTradedVolume = [](const PublicTrade& lhs, const PublicTrade& rhs) {
           return lhs.amount() < rhs.amount();
         };
         auto [smallAmountIt, bigAmountIt] = std::ranges::minmax_element(lastTrades, compareTradedVolume);
@@ -308,7 +308,7 @@ class TestAPI {
     }
 
     ExchangeName exchangeName(exchangeNameEnum, apiKeysProvider.getKeyNames(exchangeNameEnum).front());
-    const APIKey &firstAPIKey = apiKeysProvider.get(exchangeName);
+    const APIKey& firstAPIKey = apiKeysProvider.get(exchangeName);
 
     exchangePrivateOpt.emplace(coincenterInfo, exchangePublic, firstAPIKey);
 

@@ -13,12 +13,12 @@
 namespace cct::schema {
 
 struct TimePointIso8601UTC {
-  auto operator<=>(const TimePointIso8601UTC &) const noexcept = default;
+  auto operator<=>(const TimePointIso8601UTC&) const noexcept = default;
 
   // 'YYYY-MM-DDTHH:MM:SSZ'
   static constexpr std::size_t strLen() { return 20U; }
 
-  char *appendTo(char *buf) const { return TimeToStringIso8601UTC(ts, buf); }
+  char* appendTo(char* buf) const { return TimeToStringIso8601UTC(ts, buf); }
 
   ::cct::TimePoint ts;
 };
@@ -28,7 +28,7 @@ struct TimePointIso8601UTC {
 namespace std {
 template <>
 struct hash<::cct::schema::TimePointIso8601UTC> {
-  auto operator()(const ::cct::schema::TimePointIso8601UTC &val) const {
+  auto operator()(const ::cct::schema::TimePointIso8601UTC& val) const {
     return ::cct::HashValue64(static_cast<uint64_t>(val.ts.time_since_epoch().count()));
   }
 };
@@ -43,7 +43,7 @@ namespace glz {
 template <>
 struct from<JSON, ::cct::schema::TimePointIso8601UTC> {
   template <auto Opts, class It, class End>
-  static void op(auto &&value, is_context auto &&, It &&it, End &&end) {
+  static void op(auto&& value, is_context auto&&, It&& it, End&& end) {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
     value.ts = ::cct::StringToTimeISO8601UTC(it, endIt);
@@ -54,7 +54,7 @@ struct from<JSON, ::cct::schema::TimePointIso8601UTC> {
 template <>
 struct to<JSON, ::cct::schema::TimePointIso8601UTC> {
   template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+  static void op(auto&& value, Ctx&&, B&& b, IX&& ix) {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };

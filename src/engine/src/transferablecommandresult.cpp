@@ -15,7 +15,7 @@
 namespace cct {
 namespace {
 struct AmountExchangeNames {
-  bool operator==(const AmountExchangeNames &) const noexcept = default;
+  bool operator==(const AmountExchangeNames&) const noexcept = default;
 
   MonetaryAmount amount;
   ExchangeNames exchangeNames;
@@ -24,7 +24,7 @@ struct AmountExchangeNames {
 std::optional<AmountExchangeNames> AccumulateAmount(
     std::span<const TransferableCommandResult> previousTransferableResults) {
   std::optional<AmountExchangeNames> ret;
-  for (const TransferableCommandResult &previousResult : previousTransferableResults) {
+  for (const TransferableCommandResult& previousResult : previousTransferableResults) {
     const auto previousAmount = previousResult.resultedAmount();
     if (!ret) {
       ret = {previousAmount, ExchangeNames{}};
@@ -46,7 +46,7 @@ std::optional<AmountExchangeNames> AccumulateAmount(
 }  // namespace
 
 std::pair<MonetaryAmount, ExchangeNames> ComputeTradeAmountAndExchanges(
-    const CoincenterCommand &cmd, std::span<const TransferableCommandResult> previousTransferableResults) {
+    const CoincenterCommand& cmd, std::span<const TransferableCommandResult> previousTransferableResults) {
   // 2 input styles are possible:
   //  - standard full information with an amount to trade, a destination currency and an optional list of exchanges
   //  where to trade
@@ -67,7 +67,7 @@ std::pair<MonetaryAmount, ExchangeNames> ComputeTradeAmountAndExchanges(
 }
 
 std::pair<MonetaryAmount, ExchangeName> ComputeWithdrawAmount(
-    const CoincenterCommand &cmd, std::span<const TransferableCommandResult> previousTransferableResults) {
+    const CoincenterCommand& cmd, std::span<const TransferableCommandResult> previousTransferableResults) {
   // 2 input styles are possible:
   //  - standard full information with an amount to withdraw, and a couple of source - destination exchanges
   //  - a single exchange (which is the target one) with the source and amount information coming from previous
@@ -78,7 +78,7 @@ std::pair<MonetaryAmount, ExchangeName> ComputeWithdrawAmount(
                  cmd.exchangeNames().back(), cmd.exchangeNames().size());
       return {};
     }
-    const TransferableCommandResult &previousResult = previousTransferableResults.front();
+    const TransferableCommandResult& previousResult = previousTransferableResults.front();
 
     return {previousResult.resultedAmount(), previousResult.targetedExchange()};
   }

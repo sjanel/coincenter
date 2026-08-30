@@ -21,9 +21,6 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -33,6 +30,9 @@
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "kraken-schema.hpp"
 #include "krakenpublicapi.hpp"
@@ -116,8 +116,8 @@ auto PrivateQuery(HttpClient& httpClient, const APIKey& apiKey, std::string_view
             static constexpr std::string_view kSignatureKey = "API-Sign";
 
             // and compute HMAC
-            requestOptions.mutableHttpHeaders().set_back(kSignatureKey,
-                                                      B64Encode(ssl::Sha512Bin(path, B64Decode(apiKey.privateKey()))));
+            requestOptions.mutableHttpHeaders().set_back(
+                kSignatureKey, B64Encode(ssl::Sha512Bin(path, B64Decode(apiKey.privateKey()))));
           }),
       err);
 }

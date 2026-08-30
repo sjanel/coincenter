@@ -17,12 +17,12 @@ struct TradedAmounts {
 
   constexpr TradedAmounts(MonetaryAmount fromAmount, MonetaryAmount toAmount) : from(fromAmount), to(toAmount) {}
 
-  TradedAmounts operator+(const TradedAmounts &rhs) const { return {from + rhs.from, to + rhs.to}; }
-  TradedAmounts &operator+=(const TradedAmounts &rhs) { return (*this = *this + rhs); }
+  TradedAmounts operator+(const TradedAmounts& rhs) const { return {from + rhs.from, to + rhs.to}; }
+  TradedAmounts& operator+=(const TradedAmounts& rhs) { return (*this = *this + rhs); }
 
-  constexpr bool operator==(const TradedAmounts &) const noexcept = default;
+  constexpr bool operator==(const TradedAmounts&) const noexcept = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const TradedAmounts &tradedAmounts);
+  friend std::ostream& operator<<(std::ostream& os, const TradedAmounts& tradedAmounts);
 
   string str() const;
 
@@ -35,7 +35,7 @@ struct TradedAmounts {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::TradedAmounts> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -45,7 +45,7 @@ struct fmt::formatter<cct::TradedAmounts> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::TradedAmounts &a, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::TradedAmounts& a, FormatContext& ctx) const -> decltype(ctx.out()) {
     return fmt::format_to(ctx.out(), "{} -> {}", a.from, a.to);
   }
 };

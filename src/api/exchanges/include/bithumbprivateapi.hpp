@@ -3,9 +3,9 @@
 #include <unordered_map>
 
 #include "cachedresult.hpp"
-#include "httpclient.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "httpclient.hpp"
 #include "timepoint-schema.hpp"
 #include "tradeinfo.hpp"
 

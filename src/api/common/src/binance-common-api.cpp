@@ -10,11 +10,11 @@
 #include "cachedresult.hpp"
 #include "cct_log.hpp"
 #include "cct_smallvector.hpp"
-#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
 #include "currencyexchangeflatset.hpp"
+#include "httpclient.hpp"
 #include "httprequesttype.hpp"
 #include "monetary-amount-vector.hpp"
 #include "monetaryamount.hpp"
@@ -30,9 +30,9 @@ namespace {
 constexpr std::string_view kCryptoFeeBaseUrl = "https://www.binance.com";
 }  // namespace
 
-BinanceGlobalInfos::BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(AbstractMetricGateway* pMetricGateway,
-                                                                   const PermanentRequestOptions& permanentHttpRequestOptions,
-                                                                   settings::RunMode runMode)
+BinanceGlobalInfos::BinanceGlobalInfosFunc::BinanceGlobalInfosFunc(
+    AbstractMetricGateway* pMetricGateway, const PermanentRequestOptions& permanentHttpRequestOptions,
+    settings::RunMode runMode)
     : _httpClient(kCryptoFeeBaseUrl, pMetricGateway, permanentHttpRequestOptions, runMode) {}
 
 schema::binance::NetworkCoinDataVector BinanceGlobalInfos::BinanceGlobalInfosFunc::operator()() {
@@ -77,7 +77,8 @@ MonetaryAmount ComputeWithdrawalFeesFromNetworkList(CurrencyCode cur, const auto
 }  // namespace
 
 BinanceGlobalInfos::BinanceGlobalInfos(CachedResultOptions&& cachedResultOptions, AbstractMetricGateway* pMetricGateway,
-                                       const PermanentRequestOptions& permanentHttpRequestOptions, settings::RunMode runMode)
+                                       const PermanentRequestOptions& permanentHttpRequestOptions,
+                                       settings::RunMode runMode)
     : _globalInfosCache(cachedResultOptions, pMetricGateway, permanentHttpRequestOptions, runMode) {}
 
 MonetaryAmountByCurrencySet BinanceGlobalInfos::queryWithdrawalFees() {

@@ -20,7 +20,7 @@ MarketOrderBookLines CreateMarketOrderBookLines(std::initializer_list<OrderBookL
   MarketOrderBookLines marketOrderBookLines;
   marketOrderBookLines.reserve(init.size());
 
-  for (const auto &orderBookLine : init) {
+  for (const auto& orderBookLine : init) {
     if (orderBookLine.amount() < 0) {
       marketOrderBookLines.pushAsk(-orderBookLine.amount(), orderBookLine.price());
     } else {
@@ -67,7 +67,7 @@ TEST_F(ProtoMarketOrderBookTest, Serialization) {
   ASSERT_TRUE(protoObj.has_orderbook());
   ASSERT_EQ(protoObj.orderbook().asks_size(), 5U);
 
-  const auto &asks = protoObj.orderbook().asks();
+  const auto& asks = protoObj.orderbook().asks();
 
   EXPECT_EQ(asks[0].volume(), 335081914157147);
   EXPECT_EQ(asks[0].price(), 577800000000000000);
@@ -86,7 +86,7 @@ TEST_F(ProtoMarketOrderBookTest, Serialization) {
 
   ASSERT_EQ(protoObj.orderbook().bids_size(), 4U);
 
-  const auto &bids = protoObj.orderbook().bids();
+  const auto& bids = protoObj.orderbook().bids();
 
   EXPECT_EQ(bids[0].volume(), 38908790000000000);
   EXPECT_EQ(bids[0].price(), 571900000000000000);

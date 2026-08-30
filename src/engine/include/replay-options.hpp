@@ -22,7 +22,7 @@ class ReplayOptions {
 
   ReplayMode replayMode() const { return _replayMode; }
 
-  bool operator==(const ReplayOptions &) const noexcept = default;
+  bool operator==(const ReplayOptions&) const noexcept = default;
 
  private:
   TimeWindow _timeWindow;

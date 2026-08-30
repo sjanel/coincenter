@@ -17,25 +17,25 @@ class TradeOptions {
 
   constexpr TradeOptions() noexcept = default;
 
-  constexpr explicit TradeOptions(const PriceOptions &priceOptions) : _priceOptions(priceOptions) {}
+  constexpr explicit TradeOptions(const PriceOptions& priceOptions) : _priceOptions(priceOptions) {}
 
   constexpr explicit TradeOptions(TradeMode tradeMode) : _tradeMode(tradeMode) {}
 
   /// Constructs a TradeOptions based on a continuously updated price from given string representation of trade
   /// strategy
-  TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
+  TradeOptions(const PriceOptions& priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
                Duration maxTradeTime, Duration minTimeBetweenPriceUpdates = kUndefinedDuration,
                TradeTypePolicy tradeTypePolicy = TradeTypePolicy::kDefault,
                TradeSyncPolicy tradeSyncPolicy = TradeSyncPolicy::synchronous);
 
   /// Constructs a new TradeOptions based on 'rhs' with unspecified options overriden from exchange config values
-  TradeOptions(const TradeOptions &rhs, const schema::ExchangeQueryTradeConfig &exchangeTradeConfig);
+  TradeOptions(const TradeOptions& rhs, const schema::ExchangeQueryTradeConfig& exchangeTradeConfig);
 
   constexpr Duration maxTradeTime() const { return _maxTradeTime; }
 
   constexpr Duration minTimeBetweenPriceUpdates() const { return _minTimeBetweenPriceUpdates; }
 
-  const PriceOptions &priceOptions() const { return _priceOptions; }
+  const PriceOptions& priceOptions() const { return _priceOptions; }
 
   constexpr PriceStrategy priceStrategy() const { return _priceOptions.priceStrategy(); }
 
@@ -71,7 +71,7 @@ class TradeOptions {
 
   string str(bool placeRealOrderInSimulationMode) const;
 
-  bool operator==(const TradeOptions &) const noexcept = default;
+  bool operator==(const TradeOptions&) const noexcept = default;
 
  private:
   Duration _maxTradeTime = kUndefinedDuration;

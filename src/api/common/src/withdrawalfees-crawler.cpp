@@ -1,21 +1,18 @@
 #include "withdrawalfees-crawler.hpp"
 
-#include <cstddef>
 #include <string_view>
 #include <utility>
 
 #include "cachedresult.hpp"
 #include "cachedresultvault.hpp"
-#include "cct_cctype.hpp"
-#include "cct_exception.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
-#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "file.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamount.hpp"
 #include "permanentrequestoptions.hpp"
@@ -27,11 +24,31 @@
 namespace cct {
 
 namespace {
-constexpr std::string_view kUrlWithdrawFee1 = "https://withdrawalfees.com/exchanges/";
-constexpr std::string_view kUrlWithdrawFee2 = "https://www.cryptofeesaver.com/exchanges/fees/";
+constexpr std::string_view kBithumbWithdrawalFeesUrl = "https://api.bithumb.com/v2/fee/inout/ALL";
+constexpr std::string_view kKrakenWithdrawalFeesUrl =
+    "https://iapi.kraken.com/api/internal/withdrawals/public/methods?preferred_asset_name=new";
 
 File GetWithdrawInfoFile(std::string_view dataDir) {
   return {dataDir, File::Type::kCache, "withdrawinfo.json", File::IfError::kNoThrow};
+}
+
+void InsertConservativeWithdrawalInfo(WithdrawalFeesCrawler::WithdrawalInfoMaps& withdrawalInfoMaps,
+                                      CurrencyCode currencyCode, std::string_view feeAmount,
+                                      std::string_view minAmount) {
+  if (feeAmount.empty()) {
+    return;
+  }
+
+  MonetaryAmount withdrawalFee(feeAmount, currencyCode);
+  const auto feeIt = withdrawalInfoMaps.first.find(currencyCode);
+  if (feeIt != withdrawalInfoMaps.first.end() && withdrawalFee < *feeIt) {
+    return;
+  }
+
+  withdrawalInfoMaps.first.insert_or_assign(withdrawalFee);
+  if (!minAmount.empty()) {
+    withdrawalInfoMaps.second.insert_or_assign(currencyCode, MonetaryAmount(minAmount, currencyCode));
+  }
 }
 }  // namespace
 
@@ -73,26 +90,42 @@ WithdrawalFeesCrawler::WithdrawalFeesCrawler(const CoincenterInfo& coincenterInf
 WithdrawalFeesCrawler::WithdrawalFeesFunc::WithdrawalFeesFunc(const CoincenterInfo& coincenterInfo)
     : _httpClient(kNoBaseUrl, coincenterInfo.metricGatewayPtr(),
                   PermanentRequestOptions::Builder()
+                      .setFollowLocation()
                       .setTooManyErrorsPolicy(PermanentRequestOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
                       .build(),
                   coincenterInfo.getRunMode()) {}
 
 WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::operator()(
     ExchangeNameEnum exchangeNameEnum) {
-  // The two sources are fetched sequentially: they now share a single HttpClient (aeronet's client is not
-  // bound to a single host), whose response buffer is reused across queries and is therefore not safe to
-  // query concurrently.
-  auto [withdrawFees, withdrawMinMap] = get1(exchangeNameEnum);
-
-  auto [withdrawFees2, withdrawMinMap2] = get2(exchangeNameEnum);
-  withdrawFees.insert(withdrawFees2.begin(), withdrawFees2.end());
-  withdrawMinMap.merge(std::move(withdrawMinMap2));
-
-  if (withdrawFees.empty() || withdrawMinMap.empty()) {
-    log::error("Unable to parse {} withdrawal fees", EnumToString(exchangeNameEnum));
+  std::string_view response;
+  WithdrawalInfoMaps withdrawalInfoMaps;
+  switch (exchangeNameEnum) {
+    case ExchangeNameEnum::bithumb:
+      response = _httpClient.query(kBithumbWithdrawalFeesUrl, HttpRequestOptions(HttpRequestType::kGet));
+      withdrawalInfoMaps = ParseBithumbResponse(response);
+      break;
+    case ExchangeNameEnum::kraken: {
+      HttpRequestOptions requestOptions(HttpRequestType::kGet);
+      auto& httpHeaders = requestOptions.mutableHttpHeaders();
+      httpHeaders.emplace_back("Referer", "https://www.kraken.com/");
+      httpHeaders.emplace_back("X-Kraken-Asset-Name", "new");
+      response = _httpClient.query(kKrakenWithdrawalFeesUrl, requestOptions);
+      withdrawalInfoMaps = ParseKrakenResponse(response);
+      break;
+    }
+    default:
+      // Other exchanges expose withdrawal fees through their own API implementation.
+      return withdrawalInfoMaps;
   }
 
-  return std::make_pair(std::move(withdrawFees), std::move(withdrawMinMap));
+  if (withdrawalInfoMaps.first.empty()) {
+    log::error("Unable to parse {} withdrawal fees", EnumToString(exchangeNameEnum));
+  } else {
+    log::info("Updated {} withdraw infos for {} coins", EnumToString(exchangeNameEnum),
+              withdrawalInfoMaps.first.size());
+  }
+
+  return withdrawalInfoMaps;
 }
 
 void WithdrawalFeesCrawler::updateCacheFile() const {
@@ -124,116 +157,45 @@ void WithdrawalFeesCrawler::updateCacheFile() const {
   GetWithdrawInfoFile(_coincenterInfo.dataDir()).write(dataStr);
 }
 
-WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get1(
-    ExchangeNameEnum exchangeNameEnum) {
-  std::string_view exchangeName = EnumToString(exchangeNameEnum);
-  string url(kUrlWithdrawFee1);
-  url.append(exchangeName);
-  url.append(".json");
-  std::string_view dataStr = _httpClient.query(url, HttpRequestOptions(HttpRequestType::kGet));
-
+WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::ParseBithumbResponse(std::string_view dataStr) {
   WithdrawalInfoMaps ret;
-
-  schema::WithdrawFeesCrawlerSource1 withdrawalFeesCrawlerSource1;
-  ReadPartialJson(dataStr, "withdraw fees crawler service's first source", withdrawalFeesCrawlerSource1);
-
-  if (withdrawalFeesCrawlerSource1.exchange.fees.empty()) {
-    log::error("no fees data found in source 1 - either site information unavailable or code to be updated");
+  schema::BithumbWithdrawalFees response;
+  if (ReadPartialJson(dataStr, "Bithumb withdrawal fees", response)) {
     return ret;
   }
 
-  for (const schema::WithdrawFeesCrawlerExchangeFeesSource1& fee : withdrawalFeesCrawlerSource1.exchange.fees) {
-    if (fee.coin.symbol.size() > CurrencyCode::kMaxLen) {
-      log::warn("Skipping {} withdrawal fees parsing from first source: symbol too long", fee.coin.symbol);
+  for (const schema::BithumbWithdrawalAsset& asset : response) {
+    if (asset.currency.empty() || asset.currency.size() > CurrencyCode::kMaxLen) {
+      log::warn("Skipping Bithumb withdrawal fee with invalid currency code '{}'", asset.currency);
       continue;
     }
 
-    CurrencyCode cur{fee.coin.symbol};
-
-    MonetaryAmount withdrawalFee(fee.amount, cur);
-    log::trace("Updated {} withdrawal fee {} from first source", exchangeName, withdrawalFee);
-    ret.first.insert(withdrawalFee);
-
-    MonetaryAmount minWithdrawal(fee.min, cur);
-
-    log::trace("Updated {} min withdrawal {} from first source", exchangeName, minWithdrawal);
-    ret.second.insert_or_assign(minWithdrawal.currencyCode(), minWithdrawal);
-  }
-
-  if (ret.first.empty() || ret.second.empty()) {
-    log::warn("Unable to parse {} withdrawal fees from first source", exchangeName);
-  } else {
-    log::info("Updated {} withdraw infos for {} coins from first source", exchangeName, ret.first.size());
+    const CurrencyCode currencyCode(asset.currency);
+    for (const schema::BithumbWithdrawalNetwork& network : asset.networks) {
+      // Percentage fees cannot be represented by MonetaryAmount. Keep only fixed-fee networks.
+      if (network.withdraw_fee_quantity) {
+        InsertConservativeWithdrawalInfo(ret, currencyCode, *network.withdraw_fee_quantity,
+                                         network.withdraw_minimum_quantity.value_or(string{}));
+      }
+    }
   }
   return ret;
 }
 
-WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::WithdrawalFeesFunc::get2(
-    ExchangeNameEnum exchangeNameEnum) {
-  std::string_view exchangeName = EnumToString(exchangeNameEnum);
-  string url(kUrlWithdrawFee2);
-  url.append(exchangeName);
-  std::string_view withdrawalFeesCsv = _httpClient.query(url, HttpRequestOptions(HttpRequestType::kGet));
-
-  static constexpr std::string_view kBeginTableTitle = "Deposit & Withdrawal fees</h2>";
-
-  std::size_t begPos = withdrawalFeesCsv.find(kBeginTableTitle);
+WithdrawalFeesCrawler::WithdrawalInfoMaps WithdrawalFeesCrawler::ParseKrakenResponse(std::string_view dataStr) {
   WithdrawalInfoMaps ret;
-  if (begPos != string::npos) {
-    static constexpr std::string_view kBeginTable = "<table class=";
-    begPos = withdrawalFeesCsv.find(kBeginTable, begPos + kBeginTableTitle.size());
-    if (begPos != string::npos) {
-      static constexpr std::string_view kBeginWithdrawalFeeHtmlTag = R"(<th scope="row" class="align)";
-
-      std::size_t searchPos = begPos + kBeginTable.size();
-      while ((searchPos = withdrawalFeesCsv.find(kBeginWithdrawalFeeHtmlTag, searchPos)) != string::npos) {
-        auto parseNextFee = [exchangeName, &withdrawalFeesCsv](std::size_t& begPos) -> MonetaryAmount {
-          static constexpr std::string_view kBeginFeeHtmlTag = "<td class=\"align-middle align-right\">";
-          static constexpr std::string_view kEndHtmlTag = "</td>";
-
-          // Skip one column
-          for (int colPos = 0; colPos < 2; ++colPos) {
-            begPos = withdrawalFeesCsv.find(kBeginFeeHtmlTag, begPos);
-            if (begPos == string::npos) {
-              throw exception("Unable to parse {} withdrawal fees from source 2: expecting begin HTML tag",
-                              exchangeName);
-            }
-            begPos += kBeginFeeHtmlTag.size();
-          }
-          // Scan until next non space char
-          while (begPos < withdrawalFeesCsv.size() && isspace(withdrawalFeesCsv[begPos])) {
-            ++begPos;
-          }
-          std::size_t endPos = withdrawalFeesCsv.find(kEndHtmlTag, begPos + 1);
-          if (endPos == string::npos) {
-            throw exception("Unable to parse {} withdrawal fees from source 2: expecting end HTML tag", exchangeName);
-          }
-          std::size_t endHtmlTagPos = endPos;
-          while (endPos > begPos && isspace(withdrawalFeesCsv[endPos - 1])) {
-            --endPos;
-          }
-          MonetaryAmount amt(std::string_view(withdrawalFeesCsv.begin() + begPos, withdrawalFeesCsv.begin() + endPos));
-          begPos = endHtmlTagPos + kEndHtmlTag.size();
-          return amt;
-        };
-
-        // Locate withdrawal fee
-        searchPos += kBeginWithdrawalFeeHtmlTag.size();
-        MonetaryAmount withdrawalFee = parseNextFee(searchPos);
-
-        log::trace("Updated {} withdrawal fee {} from source 2, simulate min withdrawal amount", exchangeName,
-                   withdrawalFee);
-        ret.first.insert(withdrawalFee);
-
-        ret.second.insert_or_assign(withdrawalFee.currencyCode(), 3 * withdrawalFee);
-      }
-    }
+  schema::KrakenWithdrawalMethodsResponse response;
+  if (ReadPartialJson(dataStr, "Kraken withdrawal fees", response)) {
+    return ret;
   }
 
-  if (ret.first.empty() || ret.second.empty()) {
-    log::warn("Unable to parse {} withdrawal fees from second source", exchangeName);
-  } else {
-    log::info("Updated {} withdraw infos for {} coins from second source", exchangeName, ret.first.size());
+  for (const schema::KrakenWithdrawalMethod& method : response.result) {
+    if (method.asset.empty() || method.asset.size() > CurrencyCode::kMaxLen) {
+      log::warn("Skipping Kraken withdrawal fee with invalid currency code '{}'", method.asset);
+      continue;
+    }
+
+    InsertConservativeWithdrawalInfo(ret, CurrencyCode(method.asset), method.fee, method.min_amount);
   }
   return ret;
 }

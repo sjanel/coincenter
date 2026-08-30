@@ -18,7 +18,7 @@ class CoincenterCommands {
   explicit CoincenterCommands(std::span<const CoincenterCmdLineOptions> cmdLineOptionsSpan);
 
   /// @brief Set this CoincenterCommands from given command line options.
-  void addOption(const CoincenterCmdLineOptions &cmdLineOptions, const CoincenterCommand *pPreviousCommand);
+  void addOption(const CoincenterCmdLineOptions& cmdLineOptions, const CoincenterCommand* pPreviousCommand);
 
   std::span<const CoincenterCommand> commands() const { return _commands; }
 

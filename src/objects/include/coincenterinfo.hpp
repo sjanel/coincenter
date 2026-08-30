@@ -29,11 +29,11 @@ class CoincenterInfo {
   using CurrencyPrefixAcronymMap = std::map<string, string, std::less<>>;
   using StableCoinsMap = std::unordered_map<CurrencyCode, CurrencyCode>;
 
-  explicit CoincenterInfo(settings::RunMode runMode, const LoadConfiguration &loadConfiguration = LoadConfiguration(),
-                          schema::GeneralConfig &&generalConfig = schema::GeneralConfig(),
-                          LoggingInfo &&loggingInfo = LoggingInfo(), MonitoringInfo &&monitoringInfo = MonitoringInfo(),
-                          const Reader &currencyAcronymsReader = Reader(), const Reader &stableCoinsReader = Reader(),
-                          const Reader &currencyPrefixesReader = Reader());
+  explicit CoincenterInfo(settings::RunMode runMode, const LoadConfiguration& loadConfiguration = LoadConfiguration(),
+                          schema::GeneralConfig&& generalConfig = schema::GeneralConfig(),
+                          LoggingInfo&& loggingInfo = LoggingInfo(), MonitoringInfo&& monitoringInfo = MonitoringInfo(),
+                          const Reader& currencyAcronymsReader = Reader(), const Reader& stableCoinsReader = Reader(),
+                          const Reader& currencyPrefixesReader = Reader());
 
   ~CoincenterInfo();
 
@@ -41,7 +41,7 @@ class CoincenterInfo {
   /// Use this method to standardize names
   CurrencyCode standardizeCurrencyCode(CurrencyCode currencyCode) const;
   CurrencyCode standardizeCurrencyCode(std::string_view currencyCode) const;
-  CurrencyCode standardizeCurrencyCode(const char *currencyCode) const {
+  CurrencyCode standardizeCurrencyCode(const char* currencyCode) const {
     return standardizeCurrencyCode(std::string_view(currencyCode));
   }
 
@@ -49,7 +49,7 @@ class CoincenterInfo {
   /// Otherwise, return a default currency code
   CurrencyCode tryConvertStableCoinToFiat(CurrencyCode maybeStableCoin) const;
 
-  const schema::ExchangeConfig &exchangeConfig(ExchangeNameEnum exchangeNameEnum) const {
+  const schema::ExchangeConfig& exchangeConfig(ExchangeNameEnum exchangeNameEnum) const {
     return _allExchangeConfigs[exchangeNameEnum];
   }
 
@@ -59,13 +59,13 @@ class CoincenterInfo {
 
   bool useMonitoring() const { return _monitoringInfo.useMonitoring(); }
 
-  AbstractMetricGateway &metricGateway() const;
+  AbstractMetricGateway& metricGateway() const;
 
-  AbstractMetricGateway *metricGatewayPtr() const { return _metricGatewayPtr.get(); }
+  AbstractMetricGateway* metricGatewayPtr() const { return _metricGatewayPtr.get(); }
 
-  const schema::GeneralConfig &generalConfig() const { return _generalConfig; }
+  const schema::GeneralConfig& generalConfig() const { return _generalConfig; }
 
-  const LoggingInfo &loggingInfo() const { return _loggingInfo; }
+  const LoggingInfo& loggingInfo() const { return _loggingInfo; }
 
   ApiOutputType apiOutputType() const { return _generalConfig.apiOutputType; }
 

@@ -36,19 +36,19 @@ class MarketTraderEngineState {
 
   MonetaryAmount computeSellVolume(TraderCommand traderCommand) const;
 
-  void placeBuyOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime, MonetaryAmount remainingVolume,
+  void placeBuyOrder(const schema::ExchangeConfig& exchangeConfig, TimePoint placedTime, MonetaryAmount remainingVolume,
                      MonetaryAmount price, MonetaryAmount matchedVolume, MonetaryAmount from,
                      schema::ExchangeTradeFeesConfig::FeeType feeType);
 
-  void placeSellOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime,
+  void placeSellOrder(const schema::ExchangeConfig& exchangeConfig, TimePoint placedTime,
                       MonetaryAmount remainingVolume, MonetaryAmount price, MonetaryAmount matchedVolume,
                       schema::ExchangeTradeFeesConfig::FeeType feeType);
 
   auto nextOrderId() { return IntegralToString(++_nextOrderId); }
 
-  void adjustOpenedOrderRemainingVolume(const OpenedOrder &matchedOrder, MonetaryAmount newMatchedVolume);
+  void adjustOpenedOrderRemainingVolume(const OpenedOrder& matchedOrder, MonetaryAmount newMatchedVolume);
 
-  void countMatchedPart(const schema::ExchangeConfig &exchangeConfig, const OpenedOrder &matchedOrder,
+  void countMatchedPart(const schema::ExchangeConfig& exchangeConfig, const OpenedOrder& matchedOrder,
                         MonetaryAmount price, MonetaryAmount newMatchedVolume, TimePoint matchedTime);
 
   void cancelOpenedOrder(int32_t orderId);
@@ -59,7 +59,7 @@ class MarketTraderEngineState {
 
   void eraseClosedOpenedOrders(std::span<const OpenedOrder> closedOpenedOrders);
 
-  void adjustAvailableAmountsCancel(const OpenedOrder &openedOrder);
+  void adjustAvailableAmountsCancel(const OpenedOrder& openedOrder);
 
   MonetaryAmount _availableBaseAmount;
   MonetaryAmount _availableQuoteAmount;

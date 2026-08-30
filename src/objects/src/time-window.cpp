@@ -46,7 +46,7 @@ string TimeWindow::str() const {
   return ret;
 }
 
-char *TimeWindow::appendTo(char *buf) const {
+char* TimeWindow::appendTo(char* buf) const {
   *buf++ = '[';
   buf = std::ranges::copy(TimeToString(from(), kTimeFormat), buf).out;
   buf = std::ranges::copy(kArrow, buf).out;

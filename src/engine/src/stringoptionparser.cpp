@@ -78,7 +78,7 @@ Market StringOptionParser::parseMarket(FieldIs fieldIs, char delimiter) {
 namespace {
 
 template <class CharOrStringType>
-std::string_view GetNextStr(std::string_view opt, CharOrStringType sep, std::size_t &pos) {
+std::string_view GetNextStr(std::string_view opt, CharOrStringType sep, std::size_t& pos) {
   auto endPos = opt.size();
   auto begPos = pos;
   while (begPos < endPos && isblank(opt[begPos])) {

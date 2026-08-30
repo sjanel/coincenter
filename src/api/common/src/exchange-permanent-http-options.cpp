@@ -5,7 +5,7 @@
 
 namespace cct::api {
 
-ExchangePermanentHttpOptions::ExchangePermanentHttpOptions(const schema::ExchangeQueryConfig &queryConfig)
+ExchangePermanentHttpOptions::ExchangePermanentHttpOptions(const schema::ExchangeQueryConfig& queryConfig)
     : _queryConfig(queryConfig) {}
 
 PermanentRequestOptions::Builder ExchangePermanentHttpOptions::builderBase(Api api) const {

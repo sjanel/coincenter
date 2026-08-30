@@ -6,12 +6,12 @@
 
 #include "cachedresult.hpp"
 #include "cct_flatset.hpp"
-#include "httpclient.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
 #include "public-trade-vector.hpp"
 #include "volumeandpricenbdecimals.hpp"
 

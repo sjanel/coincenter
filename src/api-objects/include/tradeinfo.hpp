@@ -28,7 +28,7 @@ struct TradeInfo {
 };
 
 struct OrderInfo {
-  bool operator==(const OrderInfo &) const noexcept = default;
+  bool operator==(const OrderInfo&) const noexcept = default;
 
   TradedAmounts tradedAmounts;
   bool isClosed = false;
@@ -38,10 +38,10 @@ struct PlaceOrderInfo {
   bool isClosed() const { return orderInfo.isClosed; }
   void setClosed() { orderInfo.isClosed = true; }
 
-  TradedAmounts &tradedAmounts() { return orderInfo.tradedAmounts; }
-  const TradedAmounts &tradedAmounts() const { return orderInfo.tradedAmounts; }
+  TradedAmounts& tradedAmounts() { return orderInfo.tradedAmounts; }
+  const TradedAmounts& tradedAmounts() const { return orderInfo.tradedAmounts; }
 
-  bool operator==(const PlaceOrderInfo &) const noexcept = default;
+  bool operator==(const PlaceOrderInfo&) const noexcept = default;
 
   using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 

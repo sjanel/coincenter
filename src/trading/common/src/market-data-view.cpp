@@ -8,8 +8,8 @@
 
 namespace cct {
 
-MarketDataView::MarketDataView(const MarketOrderBook *pOrderBooks, const PublicTrade *pPublicTradesBeg,
-                               const PublicTrade *pPublicTradesEnd) noexcept
+MarketDataView::MarketDataView(const MarketOrderBook* pOrderBooks, const PublicTrade* pPublicTradesBeg,
+                               const PublicTrade* pPublicTradesEnd) noexcept
     : _pOrderBooks(pOrderBooks),
       _pPublicTradesBeg(pPublicTradesBeg),
       _pPublicTradesEnd(pPublicTradesEnd),
@@ -21,7 +21,7 @@ void MarketDataView::advanceUntil(TimePoint marketOrderBookTs) {
   _pCurrentTradesBeg = _pCurrentTradesEnd;
   _pCurrentTradesEnd = std::partition_point(
       _pCurrentTradesBeg, _pPublicTradesEnd,
-      [marketOrderBookTs](const auto &publicTrade) { return publicTrade.time() < marketOrderBookTs; });
+      [marketOrderBookTs](const auto& publicTrade) { return publicTrade.time() < marketOrderBookTs; });
 
   ++_currentOrderBookEndPos;
 }

@@ -45,13 +45,13 @@ class DummyThirdPartyReader : public Reader {
 }  // namespace
 
 HttpClient::HttpClient([[maybe_unused]] BestURLPicker bestURLPicker,
-                       [[maybe_unused]] AbstractMetricGateway *pMetricGateway,
-                       [[maybe_unused]] const PermanentRequestOptions &permanentHttpRequestOptions,
+                       [[maybe_unused]] AbstractMetricGateway* pMetricGateway,
+                       [[maybe_unused]] const PermanentRequestOptions& permanentHttpRequestOptions,
                        [[maybe_unused]] settings::RunMode runMode)
     : _bestURLPicker(kSomeFakeURL) {}
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-std::string_view HttpClient::query([[maybe_unused]] std::string_view endpoint, const HttpRequestOptions &opts) {
+std::string_view HttpClient::query([[maybe_unused]] std::string_view endpoint, const HttpRequestOptions& opts) {
   // Rates
   std::string_view marketStr = opts.postData().get("q");
   if (!marketStr.empty()) {
@@ -61,7 +61,7 @@ std::string_view HttpClient::query([[maybe_unused]] std::string_view endpoint, c
     std::string_view targetCurrency = marketStr.substr(4);
     schema::FreeCurrencyConverterResponse response;
 
-    auto &res = response.results[string(marketStr)];
+    auto& res = response.results[string(marketStr)];
 
     res.to = string(targetCurrency);
     res.fr = string(fromCurrency);

@@ -3,9 +3,9 @@
 #include <cstdint>
 
 #include "cachedresult.hpp"
-#include "httpclient.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "httpclient.hpp"
 #include "tradeinfo.hpp"
 
 namespace cct {

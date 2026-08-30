@@ -54,7 +54,7 @@ int8_t BestURLPicker::nextBaseURLPos() const {
 }
 
 void BestURLPicker::storeResponseTimePerBaseURL(int8_t baseUrlPos, uint32_t responseTimeInMs) {
-  ResponseTimeStats &stats = _responseTimeStatsPerBaseUrl[baseUrlPos];
+  ResponseTimeStats& stats = _responseTimeStatsPerBaseUrl[baseUrlPos];
 
   // How many requests we consider to compute stats?
   using NbRequestType = decltype(stats.nbRequestsDone);

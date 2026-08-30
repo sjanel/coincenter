@@ -159,7 +159,7 @@ The minimum tested version is cmake `3.15`, but it's recommended that you use th
 | ----------------------- | ------------------------------------------------------ | ----------------------------------------------- |
 | `CCT_ENABLE_TESTS`      | `ON` if main project                                   | Build and launch unit tests                     |
 | `CCT_BUILD_EXEC`        | `ON` if main project                                   | Build an executable instead of a static library |
-| `CCT_ENABLE_ASAN`       | `ON` if Debug mode                                     | Compile with AddressSanitizer                   |
+| `CCT_ENABLE_ASAN`       | `OFF`                                                  | Compile with AddressSanitizer                   |
 | `CCT_ENABLE_CLANG_TIDY` | `ON` if Debug mode and `clang-tidy` is found in `PATH` | Compile with clang-tidy checks                  |
 | `CCT_ENABLE_PROTO`      | `ON`                                                   | Compile with protobuf support                   |
 

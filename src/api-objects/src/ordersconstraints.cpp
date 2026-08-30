@@ -8,7 +8,7 @@
 namespace cct {
 
 OrdersConstraints::OrdersConstraints(CurrencyCode cur1, CurrencyCode cur2, Duration minAge, Duration maxAge,
-                                     OrderIdSet &&ordersIdSet)
+                                     OrderIdSet&& ordersIdSet)
     : _ordersIdSet(std::move(ordersIdSet)),
       _placedBefore(TimePoint::max()),
       _placedAfter(TimePoint::min()),

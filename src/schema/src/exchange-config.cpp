@@ -22,7 +22,7 @@ namespace {
 constexpr std::string_view kExchangeConfigFileName = "exchangeconfig.json";
 }  // namespace
 
-AllExchangeConfigs::AllExchangeConfigs(const LoadConfiguration &loadConfiguration) {
+AllExchangeConfigs::AllExchangeConfigs(const LoadConfiguration& loadConfiguration) {
   switch (loadConfiguration.exchangeConfigFileType()) {
     case LoadConfiguration::ExchangeConfigFileType::kProd: {
       std::string_view filename = loadConfiguration.exchangeConfigFileName();
@@ -57,10 +57,10 @@ AllExchangeConfigs::AllExchangeConfigs(const LoadConfiguration &loadConfiguratio
   }
 }
 
-void AllExchangeConfigs::mergeWith(schema::details::AllExchangeConfigsOptional &other) {
+void AllExchangeConfigs::mergeWith(schema::details::AllExchangeConfigsOptional& other) {
   for (int exchangePos = 0; exchangePos < kNbSupportedExchanges; ++exchangePos) {
-    auto &exchangeConfig = _exchangeConfigs[exchangePos];
-    auto matchExchangeIt = [exchangeNameEnum = static_cast<ExchangeNameEnum>(exchangePos)](const auto &pair) {
+    auto& exchangeConfig = _exchangeConfigs[exchangePos];
+    auto matchExchangeIt = [exchangeNameEnum = static_cast<ExchangeNameEnum>(exchangePos)](const auto& pair) {
       return pair.first == exchangeNameEnum;
     };
 
