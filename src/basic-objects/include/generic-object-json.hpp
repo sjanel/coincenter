@@ -8,14 +8,14 @@
 namespace cct::details {
 
 template <auto Opts, class B, class IX>
-constexpr bool JsonWithQuotes(B &&b, IX &&ix) {
+constexpr bool JsonWithQuotes(B&& b, IX&& ix) {
   if (ix == 0) {
     return false;
   }
 
   // This is a hack waiting for resolution of this issue: https://github.com/stephenberry/glaze/issues/1477
-  const char *pFirstChar = b.data();
-  const char *pChar = pFirstChar + ix - 1;
+  const char* pFirstChar = b.data();
+  const char* pChar = pFirstChar + ix - 1;
 
   if constexpr (Opts.prettify) {
     while (isspace(*pChar) && --pChar != pFirstChar);
@@ -29,7 +29,7 @@ constexpr bool JsonWithQuotes(B &&b, IX &&ix) {
 }
 
 template <auto Opts, class B, class IX>
-constexpr void ToStrLikeJson(auto &&value, B &&b, IX &&ix) {
+constexpr void ToStrLikeJson(auto&& value, B&& b, IX&& ix) {
   auto valueLen = value.strLen();
   bool withQuotes = JsonWithQuotes<Opts>(b, ix);
 

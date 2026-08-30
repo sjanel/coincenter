@@ -75,7 +75,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   /// Attempts to convert amount into a target currency.
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
   std::optional<MonetaryAmount> estimatedConvert(MonetaryAmount from, CurrencyCode toCurrency,
-                                                 const PriceOptions &priceOptions = PriceOptions()) {
+                                                 const PriceOptions& priceOptions = PriceOptions()) {
     MarketOrderBookMap marketOrderBookMap;
     CurrencyCodeSet fiats = queryFiats();
     MarketSet markets;
@@ -87,9 +87,9 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   /// Attempts to convert amount into a target currency.
   /// Conversion is made according to given price options, which uses the 'Maker' prices by default.
   /// No external calls is made with this version, it has all what it needs
-  std::optional<MonetaryAmount> convert(MonetaryAmount from, CurrencyCode toCurrency, const MarketsPath &conversionPath,
-                                        const CurrencyCodeSet &fiats, MarketOrderBookMap &marketOrderBookMap,
-                                        const PriceOptions &priceOptions = PriceOptions());
+  std::optional<MonetaryAmount> convert(MonetaryAmount from, CurrencyCode toCurrency, const MarketsPath& conversionPath,
+                                        const CurrencyCodeSet& fiats, MarketOrderBookMap& marketOrderBookMap,
+                                        const PriceOptions& priceOptions = PriceOptions());
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Depending on the exchange, this could be retrieved dynamically,
@@ -135,8 +135,8 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   /// For instance, findMarketsPath("XLM", "XRP") can return:
   ///   - XLM-USDT
   ///   - XRP-USDT
-  MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, MarketSet &markets,
-                              const CurrencyCodeSet &fiats, MarketPathMode marketsPathMode = MarketPathMode::kStrict);
+  MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode, MarketSet& markets,
+                              const CurrencyCodeSet& fiats, MarketPathMode marketsPathMode = MarketPathMode::kStrict);
 
   MarketsPath findMarketsPath(CurrencyCode fromCurrencyCode, CurrencyCode toCurrencyCode,
                               MarketPathMode marketsPathMode = MarketPathMode::kStrict) {
@@ -154,12 +154,12 @@ class ExchangePublic : public CacheFileUpdatorInterface {
                                     MarketPathMode marketsPathMode = MarketPathMode::kStrict);
 
   std::optional<MonetaryAmount> computeLimitOrderPrice(Market mk, CurrencyCode fromCurrencyCode,
-                                                       const PriceOptions &priceOptions);
+                                                       const PriceOptions& priceOptions);
 
-  std::optional<MonetaryAmount> computeAvgOrderPrice(Market mk, MonetaryAmount from, const PriceOptions &priceOptions);
+  std::optional<MonetaryAmount> computeAvgOrderPrice(Market mk, MonetaryAmount from, const PriceOptions& priceOptions);
 
   /// Retrieve the market in the correct order proposed by the exchange for given couple of currencies.
-  static std::optional<Market> RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet &markets);
+  static std::optional<Market> RetrieveMarket(CurrencyCode c1, CurrencyCode c2, const MarketSet& markets);
 
   std::optional<Market> retrieveMarket(CurrencyCode c1, CurrencyCode c2);
 
@@ -170,22 +170,22 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   /// @param markets passed as non const reference for cache purposes, if the method is called in a loop.
   ///                Give an empty market set at first call, markets will be retrieved only if necessary to avoid
   ///                useless API calls.
-  std::optional<Market> determineMarketFromMarketStr(std::string_view marketStr, MarketSet &markets,
+  std::optional<Market> determineMarketFromMarketStr(std::string_view marketStr, MarketSet& markets,
                                                      CurrencyCode filterCur = CurrencyCode());
 
   /// Helper method to retrieve a filtered market in the correct order from the exchange, according to optional filter
   /// currencies. For base and quote currency of the returned market, it is possible to have a neutral currency, which
   /// means that it has no constraints.
-  Market determineMarketFromFilterCurrencies(MarketSet &markets, CurrencyCode filterCur1,
+  Market determineMarketFromFilterCurrencies(MarketSet& markets, CurrencyCode filterCur1,
                                              CurrencyCode filterCur2 = CurrencyCode());
 
-  static MarketPriceMap MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap &marketOrderBookMap);
+  static MarketPriceMap MarketPriceMapFromMarketOrderBookMap(const MarketOrderBookMap& marketOrderBookMap);
 
-  const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
+  const CoincenterInfo& coincenterInfo() const { return _coincenterInfo; }
 
-  const schema::ExchangeConfig &exchangeConfig() const { return _exchangeConfig; }
+  const schema::ExchangeConfig& exchangeConfig() const { return _exchangeConfig; }
 
-  CommonAPI &commonAPI() { return _commonApi; }
+  CommonAPI& commonAPI() { return _commonApi; }
 
   /// Query withdrawal fee for given currency code.
   /// If no data found, return a 0 MonetaryAmount on given currency.
@@ -200,8 +200,8 @@ class ExchangePublic : public CacheFileUpdatorInterface {
   MarketOrderBookVector pullMarketOrderBooksForReplay(Market market, TimeWindow timeWindow);
 
  protected:
-  ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter &fiatConverter, CommonAPI &commonApi,
-                 const CoincenterInfo &coincenterInfo);
+  ExchangePublic(ExchangeNameEnum exchangeNameEnum, FiatConverter& fiatConverter, CommonAPI& commonApi,
+                 const CoincenterInfo& coincenterInfo);
 
   /// Retrieve the order book of given market.
   /// It should be more precise that previous version with possibility to go deeper.
@@ -214,10 +214,10 @@ class ExchangePublic : public CacheFileUpdatorInterface {
 
   ExchangeNameEnum _exchangeNameEnum;
   CachedResultVault _cachedResultVault;
-  FiatConverter &_fiatConverter;
-  CommonAPI &_commonApi;
-  const CoincenterInfo &_coincenterInfo;
-  const schema::ExchangeConfig &_exchangeConfig;
+  FiatConverter& _fiatConverter;
+  CommonAPI& _commonApi;
+  const CoincenterInfo& _coincenterInfo;
+  const schema::ExchangeConfig& _exchangeConfig;
   std::unique_ptr<AbstractMarketDataDeserializer> _marketDataDeserializerPtr;
   std::unique_ptr<AbstractMarketDataSerializer> _marketDataSerializerPtr;
   std::recursive_mutex _publicRequestsMutex;
@@ -225,7 +225,7 @@ class ExchangePublic : public CacheFileUpdatorInterface {
  private:
   friend class ExchangePrivate;
 
-  AbstractMarketDataSerializer &getMarketDataSerializer();
+  AbstractMarketDataSerializer& getMarketDataSerializer();
 };
 }  // namespace api
 }  // namespace cct

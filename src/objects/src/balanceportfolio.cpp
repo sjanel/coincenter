@@ -8,7 +8,7 @@
 
 namespace cct {
 namespace {
-inline auto &operator+=(auto &lhs, const auto &rhs) {
+inline auto& operator+=(auto& lhs, const auto& rhs) {
   lhs.amount += rhs.amount;
   lhs.equi += rhs.equi;
 
@@ -20,12 +20,12 @@ inline auto &operator+=(auto &lhs, const auto &rhs) {
 BalancePortfolio::BalancePortfolio(std::span<const MonetaryAmount> init) {
   // Simple for loop to avoid complex code eliminating duplicates for same currency
   // TODO (for fun): we could maybe replace this with a more elegant std::accumulate algorithm
-  std::ranges::for_each(init, [this](const auto &am) { *this += am; });
+  std::ranges::for_each(init, [this](const auto& am) { *this += am; });
 }
 
-BalancePortfolio &BalancePortfolio::operator+=(MonetaryAmount amount) {
+BalancePortfolio& BalancePortfolio::operator+=(MonetaryAmount amount) {
   if (amount != 0) {
-    auto isCurrencyCodeLt = [amount](const auto &elem) { return elem.amount.currencyCode() < amount.currencyCode(); };
+    auto isCurrencyCodeLt = [amount](const auto& elem) { return elem.amount.currencyCode() < amount.currencyCode(); };
     auto lb = std::ranges::partition_point(_sortedAmounts, isCurrencyCodeLt);
 
     if (lb == _sortedAmounts.end()) {
@@ -42,7 +42,7 @@ BalancePortfolio &BalancePortfolio::operator+=(MonetaryAmount amount) {
 
 MonetaryAmount BalancePortfolio::get(CurrencyCode currencyCode) const {
   auto it = std::ranges::partition_point(
-      _sortedAmounts, [currencyCode](const MonetaryAmountWithEquivalent &monetaryAmountWithEquivalent) {
+      _sortedAmounts, [currencyCode](const MonetaryAmountWithEquivalent& monetaryAmountWithEquivalent) {
         return monetaryAmountWithEquivalent.amount.currencyCode() < currencyCode;
       });
   if (it == _sortedAmounts.end() || it->amount.currencyCode() != currencyCode) {
@@ -51,12 +51,12 @@ MonetaryAmount BalancePortfolio::get(CurrencyCode currencyCode) const {
   return it->amount;
 }
 
-BalancePortfolio &BalancePortfolio::operator+=(const BalancePortfolio &other) {
+BalancePortfolio& BalancePortfolio::operator+=(const BalancePortfolio& other) {
   auto first1 = _sortedAmounts.begin();
   auto last1 = _sortedAmounts.end();
   auto first2 = other.begin();
   auto last2 = other.end();
-  auto amountCurrencyCompare = [](const auto &lhs, const auto &rhs) {
+  auto amountCurrencyCompare = [](const auto& lhs, const auto& rhs) {
     return lhs.amount.currencyCode() < rhs.amount.currencyCode();
   };
 
@@ -83,7 +83,7 @@ BalancePortfolio &BalancePortfolio::operator+=(const BalancePortfolio &other) {
 }
 
 void BalancePortfolio::sortByDecreasingEquivalentAmount() {
-  std::ranges::sort(_sortedAmounts, [](const auto &lhs, const auto &rhs) {
+  std::ranges::sort(_sortedAmounts, [](const auto& lhs, const auto& rhs) {
     if (lhs.equi != rhs.equi) {
       return lhs.equi > rhs.equi;
     }

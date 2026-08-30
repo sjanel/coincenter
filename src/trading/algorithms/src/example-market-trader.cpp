@@ -8,10 +8,10 @@
 
 namespace cct {
 
-ExampleMarketTrader::ExampleMarketTrader(const MarketTraderEngineState &marketTraderEngineState) noexcept
+ExampleMarketTrader::ExampleMarketTrader(const MarketTraderEngineState& marketTraderEngineState) noexcept
     : AbstractMarketTrader(kName, marketTraderEngineState) {}
 
-TraderCommand ExampleMarketTrader::trade([[maybe_unused]] const MarketDataView &marketDataView) {
+TraderCommand ExampleMarketTrader::trade([[maybe_unused]] const MarketDataView& marketDataView) {
   return TraderCommand::Place(TradeSide::sell);
 }
 

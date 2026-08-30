@@ -26,17 +26,13 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   set(MAIN_PROJECT ON)
 endif()
 
-set(CCT_ASAN_BUILD OFF)
-
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # In Debug, activate asan by default
-  set(CCT_ASAN_BUILD ON)
   find_program(CLANG_TIDY "clang-tidy")
 endif()
 
 option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
 option(CCT_BUILD_EXEC "Build an executable instead of a static library" ${MAIN_PROJECT})
-option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" ${CCT_ASAN_BUILD})
+option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" OFF)
 option(CCT_ENABLE_CLANG_TIDY "Compile with clang-tidy checks" OFF)
 option(CCT_ENABLE_PROTO "Compile with protobuf support (to export data to the outside world)" ON)
 option(CCT_BUILD_PROMETHEUS_FROM_SRC "Fetch and build from prometheus-cpp sources" OFF)
@@ -76,8 +72,8 @@ else()
 
   FetchContent_Declare(
     amadeusamc
-    URL https://github.com/AmadeusITGroup/amc/archive/refs/tags/v2.6.0.tar.gz
-    URL_HASH SHA256=381cda7834c73cd81f51693739eb3132cfb822a41499972d98621d914924de5f
+    URL https://github.com/AmadeusITGroup/amc/archive/refs/tags/v2.6.1.tar.gz
+    URL_HASH SHA256=a1cbb695f31c96b90699ef1d2db14dcd89984cf1135c29b48af70a007c44a02d
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable amadeusamc)
@@ -89,8 +85,8 @@ if(CCT_ENABLE_TESTS)
   if(NOT GTest_FOUND)
     FetchContent_Declare(
       googletest
-      URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz
-      URL_HASH SHA256=65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c
+      URL https://github.com/google/googletest/archive/refs/tags/v1.18.0.tar.gz
+      URL_HASH SHA256=6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5
     )
 
     list(APPEND fetchContentPackagesToMakeAvailable googletest)
@@ -148,19 +144,18 @@ find_package(spdlog CONFIG)
 if(NOT spdlog_FOUND)
   FetchContent_Declare(
     spdlog
-    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz
-    URL_HASH SHA256=15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67
+    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.17.0.tar.gz
+    URL_HASH SHA256=d8862955c6d74e5846b3f580b1605d2428b11d97a410d86e2fb13e857cd3a744
   )
 
   list(APPEND fetchContentPackagesToMakeAvailable spdlog)
 endif()
 
 # aeronet - HTTP client (replaces libcurl) and JWT / JWS support (replaces jwt-cpp).
-# The HTTP client is currently unreleased, so we track the main branch.
 FetchContent_Declare(
   aeronet
-  GIT_REPOSITORY https://github.com/sjanel/aeronet.git
-  GIT_TAG main
+    URL https://github.com/sjanel/aeronet/archive/refs/tags/v1.5.0.tar.gz
+    URL_HASH SHA256=109485da8ca0b1c242d3b7a3daf17d4e15183bcc58ffd3da2ea83d77b98191bd
 )
 
 # As a sub-project aeronet keeps most features OFF (they key off PROJECT_IS_TOP_LEVEL) and JWT is a
@@ -179,6 +174,7 @@ set(AERONET_BUILD_TESTS        OFF CACHE BOOL "" FORCE)
 set(AERONET_BUILD_EXAMPLES     OFF CACHE BOOL "" FORCE)
 set(AERONET_BUILD_BENCHMARKS   OFF CACHE BOOL "" FORCE)
 set(AERONET_INSTALL            OFF CACHE BOOL "" FORCE)
+set(AERONET_ENABLE_ASAN        ${CCT_ENABLE_ASAN} CACHE BOOL "" FORCE)
 
 list(APPEND fetchContentPackagesToMakeAvailable aeronet)
 

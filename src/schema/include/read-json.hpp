@@ -21,7 +21,7 @@ inline constexpr auto kPartialJsonOptions =
     json::opts_ex{{.error_on_unknown_keys = false}, /*raw_string*/ true, /*error_on_const_read*/ true};
 
 template <auto opts>
-json::error_ctx ReadJson(std::string_view strContent, std::string_view serviceName, auto &outObject) {
+json::error_ctx ReadJson(std::string_view strContent, std::string_view serviceName, auto& outObject) {
   if (strContent.empty()) {
     return json::error_ctx{};
   }
@@ -40,12 +40,12 @@ json::error_ctx ReadJson(std::string_view strContent, std::string_view serviceNa
 /**
  * Read json content from a string ignoring unknown keys
  */
-json::error_ctx ReadPartialJson(std::string_view strContent, std::string_view serviceName, auto &outObject) {
+json::error_ctx ReadPartialJson(std::string_view strContent, std::string_view serviceName, auto& outObject) {
   return ReadJson<kPartialJsonOptions>(strContent, serviceName, outObject);
 }
 
 template <auto opts>
-void ReadJsonOrThrow(std::string_view strContent, auto &outObject) {
+void ReadJsonOrThrow(std::string_view strContent, auto& outObject) {
   if (strContent.empty()) {
     return;
   }
@@ -62,7 +62,7 @@ void ReadJsonOrThrow(std::string_view strContent, auto &outObject) {
 /**
  * Read json content from a string raising an error for unknown keys
  */
-void ReadExactJsonOrThrow(std::string_view strContent, auto &outObject) {
+void ReadExactJsonOrThrow(std::string_view strContent, auto& outObject) {
   ReadJsonOrThrow<kExactJsonOptions>(strContent, outObject);
 }
 
@@ -74,12 +74,12 @@ T ReadJsonOrThrow(std::string_view strContent) {
 }
 
 template <class T, auto opts = kExactJsonOptions>
-T ReadJsonOrThrow(const Reader &reader) {
+T ReadJsonOrThrow(const Reader& reader) {
   return ReadJsonOrThrow<T, opts>(reader.readAll());
 }
 
 template <class T, auto opts = kExactJsonOptions>
-T ReadJsonOrCreateFile(const File &file) {
+T ReadJsonOrCreateFile(const File& file) {
   T outObject;
   if (file.exists()) {
     ReadJsonOrThrow<opts>(file.readAll(), outObject);

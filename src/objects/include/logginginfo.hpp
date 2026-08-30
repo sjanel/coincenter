@@ -18,7 +18,7 @@ class LoggingInfo {
  public:
   static constexpr int64_t kDefaultFileSizeInBytes = 5L * 1024 * 1024;
   static constexpr int32_t kDefaultNbMaxFiles = 10;
-  static constexpr char const *const kOutputLoggerName = "output";
+  static constexpr char const* const kOutputLoggerName = "output";
   static constexpr std::string_view kJsonFieldConsoleLevelName = "consoleLevel";
   static constexpr std::string_view kJsonFieldFileLevelName = "fileLevel";
   static constexpr std::string_view kLogLevelNames[] = {"off",  "critical", "error", "warning",
@@ -32,12 +32,12 @@ class LoggingInfo {
                        std::string_view dataDir = kDefaultDataDir);
 
   /// Creates a logging info from general config json file.
-  LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir, const schema::LogConfig &logConfig);
+  LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir, const schema::LogConfig& logConfig);
 
-  LoggingInfo(const LoggingInfo &) = delete;
-  LoggingInfo(LoggingInfo &&rhs) noexcept;
-  LoggingInfo &operator=(const LoggingInfo &) = delete;
-  LoggingInfo &operator=(LoggingInfo &&rhs) noexcept;
+  LoggingInfo(const LoggingInfo&) = delete;
+  LoggingInfo(LoggingInfo&& rhs) noexcept;
+  LoggingInfo& operator=(const LoggingInfo&) = delete;
+  LoggingInfo& operator=(LoggingInfo&& rhs) noexcept;
 
   ~LoggingInfo();
 
@@ -51,7 +51,7 @@ class LoggingInfo {
 
   bool alsoLogActivityForSimulatedCommands() const { return _alsoLogActivityForSimulatedCommands; }
 
-  void swap(LoggingInfo &rhs) noexcept;
+  void swap(LoggingInfo& rhs) noexcept;
 
  private:
   void createLoggers();

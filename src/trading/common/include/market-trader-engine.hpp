@@ -22,20 +22,20 @@ namespace cct {
 
 class MarketTraderEngine {
  public:
-  MarketTraderEngine(const schema::ExchangeConfig &exchangeConfig, Market market, MonetaryAmount startAmountBase,
+  MarketTraderEngine(const schema::ExchangeConfig& exchangeConfig, Market market, MonetaryAmount startAmountBase,
                      MonetaryAmount startAmountQuote);
 
   Market market() const { return _market; }
 
   void registerMarketTrader(std::unique_ptr<AbstractMarketTrader> marketTrader);
 
-  TradeRangeStats validateRange(MarketOrderBookVector &marketOrderBooks, PublicTradeVector &publicTrades);
+  TradeRangeStats validateRange(MarketOrderBookVector& marketOrderBooks, PublicTradeVector& publicTrades);
 
-  TradeRangeStats validateRange(MarketOrderBookVector &&marketOrderBooks, PublicTradeVector &&publicTrades);
+  TradeRangeStats validateRange(MarketOrderBookVector&& marketOrderBooks, PublicTradeVector&& publicTrades);
 
-  TradeRangeStats tradeRange(MarketOrderBookVector &&marketOrderBooks, PublicTradeVector &&publicTrades);
+  TradeRangeStats tradeRange(MarketOrderBookVector&& marketOrderBooks, PublicTradeVector&& publicTrades);
 
-  const MarketTraderEngineState &marketTraderEngineState() const { return _marketTraderEngineState; }
+  const MarketTraderEngineState& marketTraderEngineState() const { return _marketTraderEngineState; }
 
   MarketTradingResult finalizeAndComputeResult();
 
@@ -44,18 +44,18 @@ class MarketTraderEngine {
                          is_trivially_relocatable_v<MarketTraderEngineState>>::type;
 
  private:
-  void buy(const MarketOrderBook &marketOrderBook, MonetaryAmount from, PriceStrategy priceStrategy);
-  void sell(const MarketOrderBook &marketOrderBook, MonetaryAmount volume, PriceStrategy priceStrategy);
+  void buy(const MarketOrderBook& marketOrderBook, MonetaryAmount from, PriceStrategy priceStrategy);
+  void sell(const MarketOrderBook& marketOrderBook, MonetaryAmount volume, PriceStrategy priceStrategy);
 
-  void updatePrice(const MarketOrderBook &marketOrderBook, TraderCommand traderCommand);
+  void updatePrice(const MarketOrderBook& marketOrderBook, TraderCommand traderCommand);
 
   void cancelCommand(int32_t orderId);
 
-  void checkOpenedOrdersMatching(const MarketOrderBook &marketOrderBook);
+  void checkOpenedOrdersMatching(const MarketOrderBook& marketOrderBook);
 
   MonetaryAmount _startAmountBase;
   MonetaryAmount _startAmountQuote;
-  const schema::ExchangeConfig &_exchangeConfig;
+  const schema::ExchangeConfig& _exchangeConfig;
   std::unique_ptr<AbstractMarketTrader> _marketTrader;
   Market _market;
   MarketTraderEngineState _marketTraderEngineState;

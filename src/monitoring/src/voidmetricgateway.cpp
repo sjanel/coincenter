@@ -15,17 +15,17 @@ void LogError(std::string_view info) {
 }  // namespace
 
 void VoidMetricGateway::add([[maybe_unused]] MetricType metricType, [[maybe_unused]] MetricOperation op,
-                            [[maybe_unused]] const MetricKey &key, [[maybe_unused]] double val) {
+                            [[maybe_unused]] const MetricKey& key, [[maybe_unused]] double val) {
   LogError("register metric");
 }
 
-void VoidMetricGateway::createHistogram([[maybe_unused]] const MetricKey &key,
+void VoidMetricGateway::createHistogram([[maybe_unused]] const MetricKey& key,
                                         [[maybe_unused]] BucketBoundaries buckets) {
   LogError("create a Histogram metric");
 }
 
-void VoidMetricGateway::createSummary([[maybe_unused]] const MetricKey &key,
-                                      [[maybe_unused]] const MetricSummaryInfo &metricSummaryInfo) {
+void VoidMetricGateway::createSummary([[maybe_unused]] const MetricKey& key,
+                                      [[maybe_unused]] const MetricSummaryInfo& metricSummaryInfo) {
   LogError("create a Summary metric");
 }
 }  // namespace cct

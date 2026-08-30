@@ -51,8 +51,8 @@ inline auto to_utf8_vector(uint32_t cp) {
  * @param last End of buffer
  * @return Pointer to the end of the decoded buffer
  */
-inline char *decode_utf8(char *first, const char *last) {
-  char *dst = first;
+inline char* decode_utf8(char* first, const char* last) {
+  char* dst = first;
   while (first < last) {
     if (*first == '\\' && (first + 1) < last && *(first + 1) == 'u' && (first + 6) <= last) {
       uint32_t cp = 0;
@@ -81,7 +81,7 @@ inline char *decode_utf8(char *first, const char *last) {
  * The string is resized and modified in place. It does not allocate memory as the input string can only shrink.
  */
 template <class StringLike>
-void decode_utf8(StringLike &str) {
+void decode_utf8(StringLike& str) {
   str.resize(decode_utf8(str.data(), str.data() + str.size()) - str.data());
 }
 

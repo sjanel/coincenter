@@ -19,7 +19,7 @@ std::span<const std::string_view> MarketTraderFactory::allSupportedAlgorithms() 
 }
 
 std::unique_ptr<AbstractMarketTrader> MarketTraderFactory::construct(
-    std::string_view algorithmName, const MarketTraderEngineState &marketTraderEngineState) const {
+    std::string_view algorithmName, const MarketTraderEngineState& marketTraderEngineState) const {
   if (algorithmName == DummyMarketTrader::kName) {
     return std::make_unique<DummyMarketTrader>(marketTraderEngineState);
   }

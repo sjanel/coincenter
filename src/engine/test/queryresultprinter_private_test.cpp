@@ -240,7 +240,7 @@ TEST_F(QueryResultPrinterBalanceNoEquiCurTest, NoPrint) {
 class QueryResultPrinterBalanceEquiCurTest : public QueryResultPrinterTest {
  protected:
   void SetUp() override {
-    for (auto &[amount, equi] : bp1) {
+    for (auto& [amount, equi] : bp1) {
       if (amount == ma1) {
         equi = MonetaryAmount{10000, equiCur};
       } else if (amount == ma2) {
@@ -250,7 +250,7 @@ class QueryResultPrinterBalanceEquiCurTest : public QueryResultPrinterTest {
       }
     }
 
-    for (auto &[amount, equi] : bp2) {
+    for (auto& [amount, equi] : bp2) {
       if (amount == ma3) {
         equi = MonetaryAmount{4508, equiCur, 2};
       } else if (amount == ma4) {

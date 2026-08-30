@@ -21,7 +21,7 @@ auto ComputeTimeoutAction(TradeTimeoutAction tradeTimeoutAction, bool timeoutMat
 }
 }  // namespace
 
-TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
+TradeOptions::TradeOptions(const PriceOptions& priceOptions, TradeTimeoutAction timeoutAction, TradeMode tradeMode,
                            Duration maxTradeTime, Duration minTimeBetweenPriceUpdates, TradeTypePolicy tradeTypePolicy,
                            TradeSyncPolicy tradeSyncPolicy)
     : _maxTradeTime(maxTradeTime),
@@ -32,7 +32,7 @@ TradeOptions::TradeOptions(const PriceOptions &priceOptions, TradeTimeoutAction 
       _tradeTypePolicy(tradeTypePolicy),
       _tradeSyncPolicy(tradeSyncPolicy) {}
 
-TradeOptions::TradeOptions(const TradeOptions &rhs, const schema::ExchangeQueryTradeConfig &exchangeTradeConfig)
+TradeOptions::TradeOptions(const TradeOptions& rhs, const schema::ExchangeQueryTradeConfig& exchangeTradeConfig)
     : _maxTradeTime(rhs._maxTradeTime == kUndefinedDuration ? exchangeTradeConfig.timeout.duration : rhs._maxTradeTime),
       _minTimeBetweenPriceUpdates(rhs._minTimeBetweenPriceUpdates == kUndefinedDuration
                                       ? exchangeTradeConfig.minPriceUpdateDuration.duration

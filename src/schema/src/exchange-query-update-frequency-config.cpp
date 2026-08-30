@@ -4,8 +4,8 @@
 
 namespace cct::schema {
 
-void MergeWith(ExchangeQueryUpdateFrequencyConfig &src, ExchangeQueryUpdateFrequencyConfig &des) {
-  const auto sortByQueryType = [](const auto &lhs, const auto &rhs) { return lhs.first < rhs.first; };
+void MergeWith(ExchangeQueryUpdateFrequencyConfig& src, ExchangeQueryUpdateFrequencyConfig& des) {
+  const auto sortByQueryType = [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; };
 
   std::ranges::sort(src, sortByQueryType);
   std::ranges::sort(des, sortByQueryType);

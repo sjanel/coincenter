@@ -30,10 +30,10 @@ class Exchange final : public CacheFileUpdatorInterface {
   using ExchangePrivate = api::ExchangePrivate;
 
   /// Builds a Exchange without private exchange. All private requests will be forbidden.
-  Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic);
+  Exchange(const schema::ExchangeConfig& exchangeConfig, ExchangePublic& exchangePublic);
 
   /// Build a Exchange with both private and public exchanges
-  Exchange(const schema::ExchangeConfig &exchangeConfig, ExchangePublic &exchangePublic,
+  Exchange(const schema::ExchangeConfig& exchangeConfig, ExchangePublic& exchangePublic,
            std::unique_ptr<ExchangePrivate> exchangePrivate);
 
   std::string_view name() const { return apiPublic().name(); }
@@ -46,24 +46,24 @@ class Exchange final : public CacheFileUpdatorInterface {
     return ExchangeName(exchangeNameEnum(), hasPrivateAPI() ? keyName() : std::string_view());
   }
 
-  ExchangePublic &apiPublic() { return *_pExchangePublic; }
-  const ExchangePublic &apiPublic() const { return *_pExchangePublic; }
+  ExchangePublic& apiPublic() { return *_pExchangePublic; }
+  const ExchangePublic& apiPublic() const { return *_pExchangePublic; }
 
-  ExchangePrivate &apiPrivate() {
+  ExchangePrivate& apiPrivate() {
     if (hasPrivateAPI()) {
       return *_exchangePrivate;
     }
     throw exception("No private key associated to exchange {}", name());
   }
 
-  const ExchangePrivate &apiPrivate() const {
+  const ExchangePrivate& apiPrivate() const {
     if (hasPrivateAPI()) {
       return *_exchangePrivate;
     }
     throw exception("No private key associated to exchange {}", name());
   }
 
-  const schema::ExchangeConfig &exchangeConfig() const { return *_pExchangeConfig; }
+  const schema::ExchangeConfig& exchangeConfig() const { return *_pExchangeConfig; }
 
   bool hasPrivateAPI() const { return static_cast<bool>(_exchangePrivate); }
 
@@ -104,20 +104,20 @@ class Exchange final : public CacheFileUpdatorInterface {
   /// Retrieve the last price of given market.
   MonetaryAmount queryLastPrice(Market mk) { return apiPublic().queryLastPrice(mk); }
 
-  bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
+  bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const;
 
-  bool canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet &currencyExchangeSet) const;
+  bool canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const;
 
-  bool matches(const ExchangeName &exchangeName) const {
+  bool matches(const ExchangeName& exchangeName) const {
     return name() == exchangeName.name() && (!exchangeName.isKeyNameDefined() || keyName() == exchangeName.keyName());
   }
 
   void updateCacheFile() const override;
 
  private:
-  ExchangePublic *_pExchangePublic;
+  ExchangePublic* _pExchangePublic;
   std::unique_ptr<ExchangePrivate> _exchangePrivate;
-  const schema::ExchangeConfig *_pExchangeConfig;
+  const schema::ExchangeConfig* _pExchangeConfig;
 };
 
 }  // namespace cct

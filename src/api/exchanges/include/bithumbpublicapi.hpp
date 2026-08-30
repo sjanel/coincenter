@@ -4,11 +4,11 @@
 #include <string_view>
 
 #include "cachedresult.hpp"
-#include "httpclient.hpp"
 #include "currencyexchange.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
 #include "monetaryamount.hpp"

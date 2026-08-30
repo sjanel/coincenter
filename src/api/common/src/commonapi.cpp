@@ -12,7 +12,6 @@
 #include "cct_string.hpp"
 #include "cct_vector.hpp"
 #include "coincenterinfo.hpp"
-#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencycodevector.hpp"
@@ -20,6 +19,7 @@
 #include "exchange-name-enum.hpp"
 #include "fiats-cache-schema.hpp"
 #include "file.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamountbycurrencyset.hpp"
 #include "permanentrequestoptions.hpp"
@@ -43,14 +43,14 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
                      Duration withdrawalFeesUpdateFrequency, AtInit atInit)
     : _coincenterInfo(coincenterInfo),
       _fiatsCache(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), coincenterInfo),
-      _binanceGlobalInfos(CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault),
-                          coincenterInfo.metricGatewayPtr(),
-                          PermanentRequestOptions::Builder()
-                              .setFollowLocation()
-                              .setAcceptedEncoding(kDefaultAcceptEncoding)
-                              .setTooManyErrorsPolicy(PermanentRequestOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
-                              .build(),
-                          coincenterInfo.getRunMode()),
+      _binanceGlobalInfos(
+          CachedResultOptions(fiatsUpdateFrequency, _cachedResultVault), coincenterInfo.metricGatewayPtr(),
+          PermanentRequestOptions::Builder()
+              .setFollowLocation()
+              .setAcceptedEncoding(kDefaultAcceptEncoding)
+              .setTooManyErrorsPolicy(PermanentRequestOptions::TooManyErrorsPolicy::kReturnEmptyResponse)
+              .build(),
+          coincenterInfo.getRunMode()),
       _withdrawalFeesCrawler(coincenterInfo, withdrawalFeesUpdateFrequency, _cachedResultVault) {
   if (atInit == AtInit::kLoadFromFileCache) {
     schema::FiatsCache fiatsCache;

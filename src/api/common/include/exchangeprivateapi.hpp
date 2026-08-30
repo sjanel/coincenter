@@ -50,7 +50,7 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
   virtual CurrencyExchangeFlatSet queryTradableCurrencies() = 0;
 
   /// Get a fast overview of the account balance on this exchange.
-  BalancePortfolio getAccountBalance(const BalanceOptions &balanceOptions = BalanceOptions());
+  BalancePortfolio getAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions());
 
   /// Get the deposit wallet of given currency associated to this exchange.
   virtual Wallet queryDepositWallet(CurrencyCode currencyCode) = 0;
@@ -63,22 +63,22 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
   /// Depending on the exchange API, it's not always possible to retrieve them all easily matching the constraints,
   /// try to specify the market to increase your chances of having a successful query.
   virtual ClosedOrderVector queryClosedOrders(
-      const OrdersConstraints &closedOrdersConstraints = OrdersConstraints()) = 0;
+      const OrdersConstraints& closedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Get opened orders filtered according to given constraints
   virtual OpenedOrderVector queryOpenedOrders(
-      const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
+      const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Cancel all opened orders on the exchange that matches given constraints
   /// @return number of opened orders cancelled
-  virtual int cancelOpenedOrders(const OrdersConstraints &openedOrdersConstraints = OrdersConstraints()) = 0;
+  virtual int cancelOpenedOrders(const OrdersConstraints& openedOrdersConstraints = OrdersConstraints()) = 0;
 
   /// Get recent deposits filtered according to given constraints
-  virtual DepositsSet queryRecentDeposits(const DepositsConstraints &depositsConstraints = DepositsConstraints()) = 0;
+  virtual DepositsSet queryRecentDeposits(const DepositsConstraints& depositsConstraints = DepositsConstraints()) = 0;
 
   /// Get recent withdraws filtered according to given constraints
   virtual WithdrawsSet queryRecentWithdraws(
-      const WithdrawsConstraints &withdrawsConstraints = WithdrawsConstraints()) = 0;
+      const WithdrawsConstraints& withdrawsConstraints = WithdrawsConstraints()) = 0;
 
   /// Convert given amount on one market determined by the currencies of start amount and the destination one.
   /// Returned MonetaryAmount is a net amount (fees deduced) in the other currency.
@@ -88,13 +88,13 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
   /// @param from the starting amount from which conversion will be done
   /// @param toCurrency the destination currency
   /// @return trade amounts (fees deduced)
-  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options) {
+  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions& options) {
     return trade(from, toCurrency, options, _exchangePublic.findMarketsPath(from.currencyCode(), toCurrency));
   }
 
   /// Variation of 'trade' with already computed conversion path
-  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions &options,
-                      const MarketsPath &conversionPath);
+  TradedAmounts trade(MonetaryAmount from, CurrencyCode toCurrency, const TradeOptions& options,
+                      const MarketsPath& conversionPath);
 
   /// Withdraws an amount from 'this' exchange to 'targetExchange'.
   /// This method is synchronous:
@@ -104,8 +104,8 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
   /// @param targetExchange private exchange to which we should deliver the transfer
   /// @param withdrawOptions specific options for this withdraw
   /// @return information about the withdraw
-  DeliveredWithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate &targetExchange,
-                                 const WithdrawOptions &withdrawOptions);
+  DeliveredWithdrawInfo withdraw(MonetaryAmount grossAmount, ExchangePrivate& targetExchange,
+                                 const WithdrawOptions& withdrawOptions);
 
   /// Retrieve the fixed withdrawal fees per currency.
   /// Some exchanges provide this service in the public REST API but not all, hence this private API flavor.
@@ -124,12 +124,12 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
   /// Builds an ExchangeName wrapping the exchange and the key name
   ExchangeName exchangeName() const { return ExchangeName(_exchangePublic.exchangeNameEnum(), _apiKey.name()); }
 
-  const auto &exchangeConfig() const { return _exchangePublic.exchangeConfig(); }
+  const auto& exchangeConfig() const { return _exchangePublic.exchangeConfig(); }
 
  protected:
-  ExchangePrivate(const CoincenterInfo &coincenterInfo, ExchangePublic &exchangePublic, const APIKey &apiKey);
+  ExchangePrivate(const CoincenterInfo& coincenterInfo, ExchangePublic& exchangePublic, const APIKey& apiKey);
 
-  virtual BalancePortfolio queryAccountBalance(const BalanceOptions &balanceOptions = BalanceOptions()) = 0;
+  virtual BalancePortfolio queryAccountBalance(const BalanceOptions& balanceOptions = BalanceOptions()) = 0;
 
   /// Return true if exchange supports simulated order (some exchanges such as Kraken or Binance for instance
   /// support this query parameter)
@@ -142,53 +142,53 @@ class ExchangePrivate : public CacheFileUpdatorInterface {
   /// isSimulatedOrderSupported == false)
   /// @param from the remaining from amount to trade
   virtual PlaceOrderInfo placeOrder(MonetaryAmount from, MonetaryAmount volume, MonetaryAmount price,
-                                    const TradeInfo &tradeInfo) = 0;
+                                    const TradeInfo& tradeInfo) = 0;
 
   /// Cancel given order id and return its possible matched amounts.
   /// When this methods ends, order should be successfully cancelled and its matched parts returned definitely (trade
   /// automaton will not come back on this order later on)
-  virtual OrderInfo cancelOrder(OrderIdView orderId, const TradeContext &tradeContext) = 0;
+  virtual OrderInfo cancelOrder(OrderIdView orderId, const TradeContext& tradeContext) = 0;
 
   /// Query an order and return and 'OrderInfo' with its matched parts and if it is closed or not (closed means that its
   /// status and matched parts will not evolve in the future).
-  virtual OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext &tradeContext) = 0;
+  virtual OrderInfo queryOrderInfo(OrderIdView orderId, const TradeContext& tradeContext) = 0;
 
   /// Orders a withdraw in mode fire and forget.
-  virtual InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet &&destinationWallet) = 0;
+  virtual InitiatedWithdrawInfo launchWithdraw(MonetaryAmount grossAmount, Wallet&& destinationWallet) = 0;
 
   /// Check if withdraw has been received by 'this' exchange.
   /// If so, return a non-default MonetaryAmount with the net received amount
-  virtual ReceivedWithdrawInfo queryWithdrawDelivery(const InitiatedWithdrawInfo &initiatedWithdrawInfo,
-                                                     const SentWithdrawInfo &sentWithdrawInfo);
+  virtual ReceivedWithdrawInfo queryWithdrawDelivery(const InitiatedWithdrawInfo& initiatedWithdrawInfo,
+                                                     const SentWithdrawInfo& sentWithdrawInfo);
 
-  TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions &tradeOptions, Market mk);
+  TradedAmounts marketTrade(MonetaryAmount from, const TradeOptions& tradeOptions, Market mk);
 
   PermanentRequestOptions::Builder permanentHttpRequestOptionsBuilder() const;
 
-  ExchangePublic &_exchangePublic;
-  CachedResultVault &_cachedResultVault{_exchangePublic._cachedResultVault};
-  const CoincenterInfo &_coincenterInfo;
-  const APIKey &_apiKey;
+  ExchangePublic& _exchangePublic;
+  CachedResultVault& _cachedResultVault{_exchangePublic._cachedResultVault};
+  const CoincenterInfo& _coincenterInfo;
+  const APIKey& _apiKey;
 
  private:
-  PlaceOrderInfo placeOrderProcess(MonetaryAmount &from, MonetaryAmount price, const TradeInfo &tradeInfo);
+  PlaceOrderInfo placeOrderProcess(MonetaryAmount& from, MonetaryAmount price, const TradeInfo& tradeInfo);
 
   PlaceOrderInfo computeSimulatedMatchedPlacedOrderInfo(MonetaryAmount volume, MonetaryAmount price,
-                                                        const TradeInfo &tradeInfo) const;
+                                                        const TradeInfo& tradeInfo) const;
 
   std::pair<TradedAmounts, Market> isSellingPossibleOneShotDustSweeper(std::span<const Market> possibleMarkets,
                                                                        MonetaryAmount amountBalance,
-                                                                       const TradeOptions &tradeOptions);
+                                                                       const TradeOptions& tradeOptions);
 
   TradedAmounts buySomeAmountToMakeFutureSellPossible(std::span<const Market> possibleMarkets,
-                                                      MarketPriceMap &marketPriceMap, MonetaryAmount dustThreshold,
-                                                      const BalancePortfolio &balance, const TradeOptions &tradeOptions,
-                                                      const MonetaryAmountByCurrencySet &dustThresholds);
+                                                      MarketPriceMap& marketPriceMap, MonetaryAmount dustThreshold,
+                                                      const BalancePortfolio& balance, const TradeOptions& tradeOptions,
+                                                      const MonetaryAmountByCurrencySet& dustThresholds);
 
   /// Check if withdraw has been confirmed and successful from 'this' exchange
-  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo &initiatedWithdrawInfo);
+  SentWithdrawInfo isWithdrawSuccessfullySent(const InitiatedWithdrawInfo& initiatedWithdrawInfo);
 
-  void computeEquiCurrencyAmounts(BalancePortfolio &balancePortfolio, CurrencyCode equiCurrency);
+  void computeEquiCurrencyAmounts(BalancePortfolio& balancePortfolio, CurrencyCode equiCurrency);
 };
 }  // namespace api
 }  // namespace cct

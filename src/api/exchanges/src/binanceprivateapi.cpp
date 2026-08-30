@@ -30,9 +30,6 @@
 #include "cct_string.hpp"
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencyexchangeflatset.hpp"
 #include "deposit.hpp"
@@ -43,6 +40,9 @@
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "monetary-amount-vector.hpp"
@@ -258,8 +258,8 @@ T PrivateQuery(HttpClient& httpClient, const APIKey& apiKey, HttpRequestType req
 
 BinancePrivate::BinancePrivate(const CoincenterInfo& coincenterInfo, BinancePublic& binancePublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, binancePublic, apiKey),
-      _httpClient(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
-                  coincenterInfo.getRunMode()),
+      _httpClient(BinancePublic::kURLBases, coincenterInfo.metricGatewayPtr(),
+                  permanentHttpRequestOptionsBuilder().build(), coincenterInfo.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _httpClient, _apiKey, binancePublic, _queryDelay),

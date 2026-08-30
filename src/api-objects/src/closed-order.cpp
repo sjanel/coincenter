@@ -14,7 +14,7 @@ ClosedOrder::ClosedOrder(OrderId id, MonetaryAmount matchedVolume, MonetaryAmoun
                          TimePoint matchedTime, TradeSide side)
     : Order(std::move(id), matchedVolume, price, placedTime, side), _matchedTime(matchedTime) {}
 
-ClosedOrder ClosedOrder::mergeWith(const ClosedOrder &closedOrder) const {
+ClosedOrder ClosedOrder::mergeWith(const ClosedOrder& closedOrder) const {
   const MonetaryAmount totalMatchedVolume = closedOrder.matchedVolume() + matchedVolume();
   const auto previousMatchedTs = TimestampToMillisecondsSinceEpoch(matchedTime());
   const auto currentMatchedTs = TimestampToMillisecondsSinceEpoch(closedOrder.matchedTime());

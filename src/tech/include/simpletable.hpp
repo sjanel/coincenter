@@ -55,24 +55,24 @@ class CellLine {
 
   explicit CellLine(std::string_view sv) : _data(sv) {}
 
-  explicit CellLine(const char *cstr) : _data(std::string_view(cstr)) {}
+  explicit CellLine(const char* cstr) : _data(std::string_view(cstr)) {}
 
-  explicit CellLine(const string_type &str) : _data(str) {}
+  explicit CellLine(const string_type& str) : _data(str) {}
 
-  explicit CellLine(string_type &&str) : _data(std::move(str)) {}
+  explicit CellLine(string_type&& str) : _data(std::move(str)) {}
 
   explicit CellLine(std::integral auto val) : _data(val) {}
 
   // Number of chars of this single line cell value.
   size_type width() const;
 
-  void swap(CellLine &rhs) noexcept { _data.swap(rhs._data); }
+  void swap(CellLine& rhs) noexcept { _data.swap(rhs._data); }
 
   using trivially_relocatable = is_trivially_relocatable<string_type>::type;
 
-  std::strong_ordering operator<=>(const CellLine &) const noexcept = default;
+  std::strong_ordering operator<=>(const CellLine&) const noexcept = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const CellLine &singleLineCell);
+  friend std::ostream& operator<<(std::ostream& os, const CellLine& singleLineCell);
 
  private:
   value_type _data;
@@ -97,8 +97,8 @@ class Cell {
 
   /// Creates a new Row with given list of cells.
   template <class... Args>
-  explicit Cell(Args &&...singleLineCells) {
-    ([&](auto &&input) { _singleLineCells.emplace_back(std::forward<decltype(input)>(input)); }(
+  explicit Cell(Args&&... singleLineCells) {
+    ([&](auto&& input) { _singleLineCells.emplace_back(std::forward<decltype(input)>(input)); }(
          std::forward<Args>(singleLineCells)),
      ...);
   }
@@ -109,34 +109,34 @@ class Cell {
   iterator end() noexcept { return _singleLineCells.end(); }
   const_iterator end() const noexcept { return _singleLineCells.end(); }
 
-  value_type &front() { return _singleLineCells.front(); }
-  const value_type &front() const { return _singleLineCells.front(); }
+  value_type& front() { return _singleLineCells.front(); }
+  const value_type& front() const { return _singleLineCells.front(); }
 
-  value_type &back() { return _singleLineCells.back(); }
-  const value_type &back() const { return _singleLineCells.back(); }
+  value_type& back() { return _singleLineCells.back(); }
+  const value_type& back() const { return _singleLineCells.back(); }
 
-  void push_back(const value_type &cell) { _singleLineCells.push_back(cell); }
-  void push_back(value_type &&cell) { _singleLineCells.push_back(std::move(cell)); }
+  void push_back(const value_type& cell) { _singleLineCells.push_back(cell); }
+  void push_back(value_type&& cell) { _singleLineCells.push_back(std::move(cell)); }
 
   template <class... Args>
-  value_type &emplace_back(Args &&...args) {
-    return _singleLineCells.emplace_back(std::forward<Args &&>(args)...);
+  value_type& emplace_back(Args&&... args) {
+    return _singleLineCells.emplace_back(std::forward<Args&&>(args)...);
   }
 
   size_type size() const noexcept { return _singleLineCells.size(); }
 
   size_type width() const;
 
-  value_type &operator[](size_type cellPos) { return _singleLineCells[cellPos]; }
-  const value_type &operator[](size_type cellPos) const { return _singleLineCells[cellPos]; }
+  value_type& operator[](size_type cellPos) { return _singleLineCells[cellPos]; }
+  const value_type& operator[](size_type cellPos) const { return _singleLineCells[cellPos]; }
 
   void reserve(size_type sz) { _singleLineCells.reserve(sz); }
 
-  void swap(Cell &rhs) noexcept { _singleLineCells.swap(rhs._singleLineCells); }
+  void swap(Cell& rhs) noexcept { _singleLineCells.swap(rhs._singleLineCells); }
 
   using trivially_relocatable = is_trivially_relocatable<CellLineVector>::type;
 
-  std::strong_ordering operator<=>(const Cell &) const noexcept = default;
+  std::strong_ordering operator<=>(const Cell&) const noexcept = default;
 
  private:
   CellLineVector _singleLineCells;
@@ -157,8 +157,8 @@ class Row {
 
   /// Creates a new Row with given list of cells.
   template <class... Args>
-  explicit Row(Args &&...cells) {
-    ([&](auto &&input) { _cells.emplace_back(std::forward<decltype(input)>(input)); }(std::forward<Args>(cells)), ...);
+  explicit Row(Args&&... cells) {
+    ([&](auto&& input) { _cells.emplace_back(std::forward<decltype(input)>(input)); }(std::forward<Args>(cells)), ...);
   }
 
   iterator begin() noexcept { return _cells.begin(); }
@@ -167,18 +167,18 @@ class Row {
   iterator end() noexcept { return _cells.end(); }
   const_iterator end() const noexcept { return _cells.end(); }
 
-  value_type &front() { return _cells.front(); }
-  const value_type &front() const { return _cells.front(); }
+  value_type& front() { return _cells.front(); }
+  const value_type& front() const { return _cells.front(); }
 
-  value_type &back() { return _cells.back(); }
-  const value_type &back() const { return _cells.back(); }
+  value_type& back() { return _cells.back(); }
+  const value_type& back() const { return _cells.back(); }
 
-  void push_back(const value_type &cell) { _cells.push_back(cell); }
-  void push_back(value_type &&cell) { _cells.push_back(std::move(cell)); }
+  void push_back(const value_type& cell) { _cells.push_back(cell); }
+  void push_back(value_type&& cell) { _cells.push_back(std::move(cell)); }
 
   template <class... Args>
-  value_type &emplace_back(Args &&...args) {
-    return _cells.emplace_back(std::forward<Args &&>(args)...);
+  value_type& emplace_back(Args&&... args) {
+    return _cells.emplace_back(std::forward<Args&&>(args)...);
   }
 
   size_type size() const noexcept { return _cells.size(); }
@@ -187,14 +187,14 @@ class Row {
 
   void reserve(size_type sz) { _cells.reserve(sz); }
 
-  value_type &operator[](size_type cellPos) { return _cells[cellPos]; }
-  const value_type &operator[](size_type cellPos) const { return _cells[cellPos]; }
+  value_type& operator[](size_type cellPos) { return _cells[cellPos]; }
+  const value_type& operator[](size_type cellPos) const { return _cells[cellPos]; }
 
-  void swap(Row &rhs) noexcept { _cells.swap(rhs._cells); }
+  void swap(Row& rhs) noexcept { _cells.swap(rhs._cells); }
 
   using trivially_relocatable = is_trivially_relocatable<CellVector>::type;
 
-  std::strong_ordering operator<=>(const Row &) const noexcept = default;
+  std::strong_ordering operator<=>(const Row&) const noexcept = default;
 
  private:
   CellVector _cells;
@@ -204,5 +204,5 @@ class Row {
 
 using SimpleTable = vector<table::Row>;
 
-std::ostream &operator<<(std::ostream &os, const SimpleTable &table);
+std::ostream& operator<<(std::ostream& os, const SimpleTable& table);
 }  // namespace cct

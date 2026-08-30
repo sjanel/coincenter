@@ -68,12 +68,12 @@ class ProtobufSerializerDeserializerTest : public ProtobufBaseDataTest {
                                                kSmallRehashThreshold, DurationTypeFlush, kFlushNbMillis>;
   using Deserializer = ProtobufObjectsDeserializer<::proto::PublicTrade, PublicTradeConverter>;
 
-  Serializer createSerializer(const MarketTimestampSet &marketTimestampSet = MarketTimestampSet{}) {
+  Serializer createSerializer(const MarketTimestampSet& marketTimestampSet = MarketTimestampSet{}) {
     return Serializer{subPath1, marketTimestampSet, nbTradesPerMarketInMemory};
   }
   Deserializer createDeserializer() { return Deserializer{subPath1}; }
 
-  void serializeSomeObjects(Serializer &serializer) {
+  void serializeSomeObjects(Serializer& serializer) {
     // push two times same object (should not be duplicated during writing)
     serializer.push(mk1, td2);
     serializer.push(mk1, td2);
@@ -127,7 +127,7 @@ TEST_F(ProtobufSerializerDeserializerTest, SerializeThenDeserializeSomeObjects) 
       subPath1 / std::string_view{mk4.str()} / "2013" / "08" / "16" / ComputeProtoFileName(3),
       subPath1 / std::string_view{mk5.str()} / "2014" / "12" / "19" / ComputeProtoFileName(9)};
 
-  auto isFilePresent = [](const auto &fileName) { return std::filesystem::exists(fileName); };
+  auto isFilePresent = [](const auto& fileName) { return std::filesystem::exists(fileName); };
 
   EXPECT_TRUE(std::ranges::all_of(kExpectedFiles, isFilePresent));
 
@@ -593,7 +593,7 @@ TEST_F(ProtobufSerializerDeserializerTest, ManySerializationsDifferentHoursOfDay
       subPath1 / std::string_view{mk4.str()} / "2002" / "07" / "07" / ComputeProtoFileName(6),
   };
 
-  auto isFilePresent = [](const auto &fileName) { return std::filesystem::exists(fileName); };
+  auto isFilePresent = [](const auto& fileName) { return std::filesystem::exists(fileName); };
 
   EXPECT_TRUE(std::ranges::all_of(kExpectedFiles, isFilePresent));
 
@@ -602,7 +602,7 @@ TEST_F(ProtobufSerializerDeserializerTest, ManySerializationsDifferentHoursOfDay
 
   ASSERT_EQ(marketTimestampSet.size(), 2U);
 
-  const auto &marketTimestamp = marketTimestampSet.front();
+  const auto& marketTimestamp = marketTimestampSet.front();
 
   const auto lastTp = *std::next(std::end(kTimePoints), -1);
 

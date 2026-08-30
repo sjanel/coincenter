@@ -31,7 +31,7 @@ class PriceOptions {
   explicit PriceOptions(RelativePrice relativePrice);
 
   /// Constructs a PriceOptions based on given trade configuration
-  explicit PriceOptions(const schema::ExchangeQueryTradeConfig &tradeConfig);
+  explicit PriceOptions(const schema::ExchangeQueryTradeConfig& tradeConfig);
 
   constexpr PriceStrategy priceStrategy() const { return _priceStrategy; }
 
@@ -57,7 +57,7 @@ class PriceOptions {
 
   bool isDefault() const { return _isDefault; }
 
-  bool operator==(const PriceOptions &) const noexcept = default;
+  bool operator==(const PriceOptions&) const noexcept = default;
 
  private:
   static constexpr RelativePrice kNoRelativePrice = std::numeric_limits<RelativePrice>::min();

@@ -17,9 +17,6 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currency-chain-picker.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
@@ -30,6 +27,9 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "huobi-schema.hpp"
 #include "market.hpp"
@@ -83,7 +83,8 @@ T PublicQuery(HttpClient& httpClient, std::string_view endpoint, const HttpPostD
 
 HuobiPublic::HuobiPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, api::CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::huobi, fiatConverter, commonAPI, config),
-      _httpClient(kURLBases, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kURLBases, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           _httpClient),

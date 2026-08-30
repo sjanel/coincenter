@@ -12,10 +12,10 @@
 namespace cct {
 
 namespace {
-MonetaryAmount ComputeTotalSum(const BalancePortfolio &total) {
+MonetaryAmount ComputeTotalSum(const BalancePortfolio& total) {
   CurrencyCode balanceCurrencyCode = total.equiCurrency();
   MonetaryAmount totalSum(0, balanceCurrencyCode);
-  for (const auto &[amount, equi] : total) {
+  for (const auto& [amount, equi] : total) {
     totalSum += equi;
   }
   return totalSum;
@@ -38,7 +38,7 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
   }
 
   if (wide) {
-    for (const auto &[exchangePtr, balancePortfolio] : _balancePerExchange) {
+    for (const auto& [exchangePtr, balancePortfolio] : _balancePerExchange) {
       string account(exchangePtr->name());
       account.push_back('_');
       account.append(exchangePtr->keyName());
@@ -48,7 +48,7 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
   SimpleTable balanceTable{std::move(header)};
 
   const int nbExchanges = _balancePerExchange.size();
-  for (const auto &[amount, equi] : total) {
+  for (const auto& [amount, equi] : total) {
     // Amounts impossible to convert have a zero value
     table::Row row(amount.currencyStr(), amount.amountStr());
     if (countEqui) {
@@ -76,7 +76,7 @@ SimpleTable BalancePerExchangePortfolio::getTable(bool wide) const {
 
 BalancePortfolio BalancePerExchangePortfolio::computeTotal() const {
   BalancePortfolio total;
-  for (const auto &[exchangePtr, balancePortfolio] : _balancePerExchange) {
+  for (const auto& [exchangePtr, balancePortfolio] : _balancePerExchange) {
     total += balancePortfolio;
   }
   return total;

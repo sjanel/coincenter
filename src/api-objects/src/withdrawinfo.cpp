@@ -18,8 +18,8 @@ InitiatedWithdrawInfo::InitiatedWithdrawInfo(Wallet receivingWallet, std::string
       _initiatedTime(initiatedTime) {}
 }  // namespace api
 
-DeliveredWithdrawInfo::DeliveredWithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo,
-                                             api::ReceivedWithdrawInfo &&receivedWithdrawInfo)
+DeliveredWithdrawInfo::DeliveredWithdrawInfo(api::InitiatedWithdrawInfo&& initiatedWithdrawInfo,
+                                             api::ReceivedWithdrawInfo&& receivedWithdrawInfo)
     : _initiatedWithdrawInfo(std::move(initiatedWithdrawInfo)),
       _receivedWithdrawInfo(std::move(receivedWithdrawInfo)) {}
 

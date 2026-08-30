@@ -15,7 +15,7 @@
 #include "timedef.hpp"
 
 namespace cct {
-CoincenterCommand CoincenterCommandFactory::CreateMarketCommand(StringOptionParser &optionParser) {
+CoincenterCommand CoincenterCommandFactory::CreateMarketCommand(StringOptionParser& optionParser) {
   auto market = optionParser.parseMarket(StringOptionParser::FieldIs::kOptional);
   if (market.isNeutral()) {
     market = Market(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
@@ -28,7 +28,7 @@ CoincenterCommand CoincenterCommandFactory::CreateMarketCommand(StringOptionPars
 }
 
 CoincenterCommand CoincenterCommandFactory::createOrderCommand(CoincenterCommandType type,
-                                                               StringOptionParser &optionParser) {
+                                                               StringOptionParser& optionParser) {
   auto market = optionParser.parseMarket(StringOptionParser::FieldIs::kOptional);
   if (market.isNeutral()) {
     market = Market(optionParser.parseCurrency(StringOptionParser::FieldIs::kOptional), CurrencyCode());
@@ -42,7 +42,7 @@ CoincenterCommand CoincenterCommandFactory::createOrderCommand(CoincenterCommand
 }
 
 CoincenterCommand CoincenterCommandFactory::createTradeCommand(CoincenterCommandType type,
-                                                               StringOptionParser &optionParser) {
+                                                               StringOptionParser& optionParser) {
   CoincenterCommand command(type);
   command.setTradeOptions(_cmdLineOptions.computeTradeOptions());
 
@@ -85,7 +85,7 @@ CoincenterCommand CoincenterCommandFactory::createTradeCommand(CoincenterCommand
   return command;
 }
 
-CoincenterCommand CoincenterCommandFactory::createWithdrawApplyCommand(StringOptionParser &optionParser) {
+CoincenterCommand CoincenterCommandFactory::createWithdrawApplyCommand(StringOptionParser& optionParser) {
   auto [amount, amountType] = optionParser.parseNonZeroAmount(StringOptionParser::FieldIs::kOptional);
   auto exchanges = optionParser.parseExchanges('-');
   if (amountType == StringOptionParser::AmountType::kNotPresent) {
@@ -95,7 +95,7 @@ CoincenterCommand CoincenterCommandFactory::createWithdrawApplyCommand(StringOpt
     if (exchanges.size() != 1U) {
       throw invalid_argument("One destination exchange should be provided for withdraw with previous command");
     }
-    const auto &previousCommand = *_pPreviousCommand;
+    const auto& previousCommand = *_pPreviousCommand;
     if (!IsAnyTrade(previousCommand.type())) {
       throw invalid_argument("Previous command for withdrawal should be an any trade type");
     }
@@ -112,7 +112,7 @@ CoincenterCommand CoincenterCommandFactory::createWithdrawApplyCommand(StringOpt
   return command;
 }
 
-CoincenterCommand CoincenterCommandFactory::createWithdrawApplyAllCommand(StringOptionParser &optionParser) {
+CoincenterCommand CoincenterCommandFactory::createWithdrawApplyAllCommand(StringOptionParser& optionParser) {
   auto cur = optionParser.parseCurrency();
   auto exchanges = optionParser.parseExchanges('-');
   if (exchanges.size() != 2U || cur.isNeutral()) {

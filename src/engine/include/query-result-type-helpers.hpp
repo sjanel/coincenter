@@ -7,10 +7,10 @@
 
 namespace cct {
 
-bool ContainsMarket(Market market, const MarketTimestampSet &marketTimestampSet);
+bool ContainsMarket(Market market, const MarketTimestampSet& marketTimestampSet);
 
-bool ContainsMarket(Market market, const MarketTimestampSets &marketTimestampSets);
+bool ContainsMarket(Market market, const MarketTimestampSets& marketTimestampSets);
 
-MarketSet ComputeAllMarkets(const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange);
+MarketSet ComputeAllMarkets(const MarketTimestampSetsPerExchange& marketTimestampSetsPerExchange);
 
 }  // namespace cct

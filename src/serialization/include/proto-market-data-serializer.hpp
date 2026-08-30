@@ -20,10 +20,10 @@ class MarketOrderBook;
 /// This class is not thread safe
 class ProtoMarketDataSerializer : public AbstractMarketDataSerializer {
  public:
-  ProtoMarketDataSerializer(std::string_view dataDir, const MarketTimestampSets &lastWrittenObjectsMarketTimestamp,
+  ProtoMarketDataSerializer(std::string_view dataDir, const MarketTimestampSets& lastWrittenObjectsMarketTimestamp,
                             std::string_view exchangeName);
 
-  void push(const MarketOrderBook &marketOrderBook) override;
+  void push(const MarketOrderBook& marketOrderBook) override;
 
   void push(Market market, std::span<const PublicTrade> publicTrades) override;
 

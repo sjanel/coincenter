@@ -3,10 +3,10 @@
 #include <array>
 
 #include "abstractmetricgateway.hpp"
-#include "httpmetrics.hpp"
 #include "currencycode.hpp"
 #include "enum-string.hpp"
 #include "exchange.hpp"
+#include "httpmetrics.hpp"
 #include "market.hpp"
 #include "metric.hpp"
 #include "monetaryamount.hpp"
@@ -19,27 +19,27 @@
 
 namespace cct {
 
-MetricsExporter::MetricsExporter(AbstractMetricGateway *pMetricsGateway) : _pMetricsGateway(pMetricsGateway) {
+MetricsExporter::MetricsExporter(AbstractMetricGateway* pMetricsGateway) : _pMetricsGateway(pMetricsGateway) {
   if (_pMetricsGateway != nullptr) {
     createSummariesAndHistograms();
   }
 }
 
-void MetricsExporter::exportHealthCheckMetrics(const ExchangeHealthCheckStatus &healthCheckPerExchange) {
+void MetricsExporter::exportHealthCheckMetrics(const ExchangeHealthCheckStatus& healthCheckPerExchange) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("health_check", "Is exchange status OK?");
-  for (const auto &[exchangePtr, healthCheckResult] : healthCheckPerExchange) {
-    const Exchange &exchange = *exchangePtr;
+  for (const auto& [exchangePtr, healthCheckResult] : healthCheckPerExchange) {
+    const Exchange& exchange = *exchangePtr;
     key.set("exchange", exchange.name());
     _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key, static_cast<double>(healthCheckResult));
   }
 }
 
-void MetricsExporter::exportBalanceMetrics(const BalancePerExchange &balancePerExchange, CurrencyCode equiCurrency) {
+void MetricsExporter::exportBalanceMetrics(const BalancePerExchange& balancePerExchange, CurrencyCode equiCurrency) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("available_balance", "Available balance in the exchange account");
-  for (const auto &[exchangePtr, balancePortfolio] : balancePerExchange) {
-    const Exchange &exchange = *exchangePtr;
+  for (const auto& [exchangePtr, balancePortfolio] : balancePerExchange) {
+    const Exchange& exchange = *exchangePtr;
     key.set("exchange", exchange.name());
     key.set("account", exchange.keyName());
     key.set("total", "no");
@@ -59,14 +59,14 @@ void MetricsExporter::exportBalanceMetrics(const BalancePerExchange &balancePerE
   }
 }
 
-void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderBookMaps) {
+void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps& marketOrderBookMaps) {
   RETURN_IF_NO_MONITORING;
   MetricKey key;
-  for (const auto &[exchange, marketOrderBookMap] : marketOrderBookMaps) {
+  for (const auto& [exchange, marketOrderBookMap] : marketOrderBookMaps) {
     key.set(kMetricNameKey, "limit_price");
     key.set(kMetricHelpKey, "Best bids and asks prices");
     key.set("exchange", exchange->name());
-    for (const auto &[mk, marketOrderbook] : marketOrderBookMap) {
+    for (const auto& [mk, marketOrderbook] : marketOrderBookMap) {
       key.set("market", mk.assetsPairStrLower('-'));
       key.set("side", "ask");
       _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
@@ -77,7 +77,7 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
     }
     key.set(kMetricNameKey, "limit_volume");
     key.set(kMetricHelpKey, "Best bids and asks volumes");
-    for (const auto &[mk, marketOrderbook] : marketOrderBookMap) {
+    for (const auto& [mk, marketOrderbook] : marketOrderBookMap) {
       key.set("market", mk.assetsPairStrLower('-'));
       key.set("side", "ask");
       _pMetricsGateway->add(MetricType::kGauge, MetricOperation::kSet, key,
@@ -89,11 +89,11 @@ void MetricsExporter::exportTickerMetrics(const ExchangeTickerMaps &marketOrderB
   }
 }
 
-void MetricsExporter::exportOrderbookMetrics(const MarketOrderBookConversionRates &marketOrderBookConversionRates) {
+void MetricsExporter::exportOrderbookMetrics(const MarketOrderBookConversionRates& marketOrderBookConversionRates) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("limit_pri", "Best bids and asks prices");
 
-  for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
+  for (const auto& [exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
     key.set("market", marketOrderBook.market().assetsPairStrLower('-'));
     key.set("exchange", EnumToString(exchangeNameEnum));
     key.set("side", "ask");
@@ -103,7 +103,7 @@ void MetricsExporter::exportOrderbookMetrics(const MarketOrderBookConversionRate
   }
   key.set(kMetricNameKey, "limit_vol");
   key.set(kMetricHelpKey, "Best bids and asks volumes");
-  for (const auto &[exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
+  for (const auto& [exchangeNameEnum, marketOrderBook, optConversionRate] : marketOrderBookConversionRates) {
     key.set("market", marketOrderBook.market().assetsPairStrLower('-'));
     key.set("exchange", EnumToString(exchangeNameEnum));
     key.set("side", "ask");
@@ -115,11 +115,11 @@ void MetricsExporter::exportOrderbookMetrics(const MarketOrderBookConversionRate
   }
 }
 
-void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange &lastTradesPerExchange) {
+void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange& lastTradesPerExchange) {
   RETURN_IF_NO_MONITORING;
   MetricKey key = CreateMetricKey("", "All public trades that occurred on the market");
 
-  for (const auto &[exchange, lastTrades] : lastTradesPerExchange) {
+  for (const auto& [exchange, lastTrades] : lastTradesPerExchange) {
     if (lastTrades.empty()) {
       continue;
     }
@@ -130,7 +130,7 @@ void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange &lastTrade
     std::array<MonetaryAmount, 2> totalAmounts{MonetaryAmount(0, mk.base()), MonetaryAmount(0, mk.base())};
     std::array<MonetaryAmount, 2> totalPrices{MonetaryAmount(0, mk.quote()), MonetaryAmount(0, mk.quote())};
     std::array<int, 2> nb{};
-    for (const PublicTrade &trade : lastTrades) {
+    for (const PublicTrade& trade : lastTrades) {
       const int buyOrSell = trade.side() == TradeSide::buy ? 0 : 1;
 
       totalAmounts[buyOrSell] += trade.amount();
@@ -153,7 +153,7 @@ void MetricsExporter::exportLastTradesMetrics(const TradesPerExchange &lastTrade
 }
 
 void MetricsExporter::createSummariesAndHistograms() {
-  for (const auto &[requestType, metricKey] : HttpMetrics::kRequestDurationKeys) {
+  for (const auto& [requestType, metricKey] : HttpMetrics::kRequestDurationKeys) {
     static constexpr std::array kRequestDurationBoundariesMs = {5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0};
     _pMetricsGateway->createHistogram(metricKey, kRequestDurationBoundariesMs);
   }

@@ -91,7 +91,7 @@ class FlatKeyValueString {
   void emplace_back(std::string_view key, std::string_view value);
 
   template <std::size_t N>
-  void emplace_back(std::string_view key, const std::array<char, N> &value) {
+  void emplace_back(std::string_view key, const std::array<char, N>& value) {
     emplace_back(key, std::string_view(value.data(), N));
   }
 
@@ -104,17 +104,17 @@ class FlatKeyValueString {
     emplace_back(key, std::string_view(buf.data(), ptr));
   }
 
-  void push_back(const KeyValuePair &kvPair);
+  void push_back(const KeyValuePair& kvPair);
 
   /// Appends content of other FlatKeyValueString into 'this'.
   /// No check is made on duplicated keys.
-  void append(const FlatKeyValueString &rhs);
+  void append(const FlatKeyValueString& rhs);
 
   /// Pushes a new {key, value} entry at the front of this buffer.
   void emplace_front(std::string_view key, std::string_view value);
 
   template <std::size_t N>
-  void emplace_front(std::string_view key, const std::array<char, N> &value) {
+  void emplace_front(std::string_view key, const std::array<char, N>& value) {
     emplace_front(key, std::string_view(value.data(), N));
   }
 
@@ -127,13 +127,13 @@ class FlatKeyValueString {
     emplace_front(key, std::string_view(buf.data(), ptr));
   }
 
-  void push_front(const KeyValuePair &kvPair);
+  void push_front(const KeyValuePair& kvPair);
 
   /// Updates the value for given key, or append if not existing.
   void set(std::string_view key, std::string_view value);
 
   template <std::size_t N>
-  void set(std::string_view key, const std::array<char, N> &value) {
+  void set(std::string_view key, const std::array<char, N>& value) {
     set(key, std::string_view(value.data(), N));
   }
 
@@ -149,7 +149,7 @@ class FlatKeyValueString {
   void set_back(std::string_view key, std::string_view value);
 
   template <std::size_t N>
-  void set_back(std::string_view key, const std::array<char, N> &value) {
+  void set_back(std::string_view key, const std::array<char, N>& value) {
     set_back(key, std::string_view(value.data(), N));
   }
 
@@ -175,11 +175,11 @@ class FlatKeyValueString {
 
   bool empty() const noexcept { return _data.empty(); }
 
-  const char *c_str() const noexcept { return _data.c_str(); }
+  const char* c_str() const noexcept { return _data.c_str(); }
 
   void clear() noexcept { _data.clear(); }
 
-  void swap(FlatKeyValueString &rhs) noexcept { _data.swap(rhs._data); }
+  void swap(FlatKeyValueString& rhs) noexcept { _data.swap(rhs._data); }
 
   /// Get a string_view on the full data hold by this FlatKeyValueString.
   /// The returned string_view is guaranteed to be null-terminated.
@@ -194,12 +194,12 @@ class FlatKeyValueString {
   /// Returns a new FlatKeyValueString URL encoded except delimiters.
   FlatKeyValueString urlEncodeExceptDelimiters() const;
 
-  auto operator<=>(const FlatKeyValueString &) const noexcept = default;
+  auto operator<=>(const FlatKeyValueString&) const noexcept = default;
 
   using trivially_relocatable = is_trivially_relocatable<string>::type;
 
  private:
-  explicit FlatKeyValueString(string &&data) noexcept(std::is_nothrow_move_constructible_v<string>)
+  explicit FlatKeyValueString(string&& data) noexcept(std::is_nothrow_move_constructible_v<string>)
       : _data(std::move(data)) {}
 
   string _data;
@@ -207,7 +207,7 @@ class FlatKeyValueString {
 
 template <char KeyValuePairSep, char AssignmentChar>
 FlatKeyValueString<KeyValuePairSep, AssignmentChar>::FlatKeyValueString(std::span<const KeyValuePair> init) {
-  std::ranges::for_each(init, [this](const auto &kv) { push_back(kv); });
+  std::ranges::for_each(init, [this](const auto& kv) { push_back(kv); });
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
@@ -229,7 +229,7 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::emplace_back(std::stri
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_back(const KeyValuePair &kv) {
+inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_back(const KeyValuePair& kv) {
   switch (kv.val.index()) {
     case 0:
       emplace_back(kv.key, std::get<std::string_view>(kv.val));
@@ -243,7 +243,7 @@ inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_back(const
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(const FlatKeyValueString &rhs) {
+void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::append(const FlatKeyValueString& rhs) {
   if (!rhs._data.empty()) {
     if (!_data.empty()) {
       _data.push_back(KeyValuePairSep);
@@ -273,7 +273,7 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::emplace_front(std::str
 }
 
 template <char KeyValuePairSep, char AssignmentChar>
-inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_front(const KeyValuePair &kv) {
+inline void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::push_front(const KeyValuePair& kv) {
   switch (kv.val.index()) {
     case 0:
       emplace_front(kv.key, std::get<std::string_view>(kv.val));
@@ -339,8 +339,8 @@ void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::erase(std::string_view
 
 template <char KeyValuePairSep, char AssignmentChar>
 void FlatKeyValueString<KeyValuePairSep, AssignmentChar>::erase(const_iterator it) {
-  const char *beg = it._value._begKey;
-  const char *end = it._value._endValue;
+  const char* beg = it._value._begKey;
+  const char* end = it._value._endValue;
 
   if (end != _data.data() + _data.size()) {
     ++end;
@@ -399,7 +399,7 @@ string FlatKeyValueString<KeyValuePairSep, AssignmentChar>::toJsonStr() const {
     ret.push_back('"');
   };
 
-  for (const auto &kv : *this) {
+  for (const auto& kv : *this) {
     const auto key = kv.key();
     const auto val = kv.val();
 
@@ -453,7 +453,7 @@ FlatKeyValueString<KeyValuePairSep, AssignmentChar>::urlEncodeExceptDelimiters()
 namespace std {
 template <char KeyValuePairSep, char AssignmentChar>
 struct hash<cct::FlatKeyValueString<KeyValuePairSep, AssignmentChar>> {
-  std::size_t operator()(const cct::FlatKeyValueString<KeyValuePairSep, AssignmentChar> &val) const {
+  std::size_t operator()(const cct::FlatKeyValueString<KeyValuePairSep, AssignmentChar>& val) const {
     return std::hash<std::string_view>()(val.str());
   }
 };

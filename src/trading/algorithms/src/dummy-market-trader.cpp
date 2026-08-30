@@ -7,10 +7,10 @@
 
 namespace cct {
 
-DummyMarketTrader::DummyMarketTrader(const MarketTraderEngineState &marketTraderEngineState) noexcept
+DummyMarketTrader::DummyMarketTrader(const MarketTraderEngineState& marketTraderEngineState) noexcept
     : AbstractMarketTrader(kName, marketTraderEngineState) {}
 
-TraderCommand DummyMarketTrader::trade([[maybe_unused]] const MarketDataView &marketDataView) {
+TraderCommand DummyMarketTrader::trade([[maybe_unused]] const MarketDataView& marketDataView) {
   return TraderCommand::Wait();
 }
 

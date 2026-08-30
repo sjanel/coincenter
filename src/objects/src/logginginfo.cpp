@@ -29,7 +29,7 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
 }
 
 LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_view dataDir,
-                         const schema::LogConfig &logConfig)
+                         const schema::LogConfig& logConfig)
     : _dataDir(dataDir),
       _maxFileSizeLogFileInBytes(logConfig.maxFileSize.sizeInBytes),
       _maxNbLogFiles(logConfig.maxNbFiles),
@@ -39,7 +39,7 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
     createLoggers();
   }
 
-  const schema::ActivityTrackingConfig &activityTrackingConfig = logConfig.activityTracking;
+  const schema::ActivityTrackingConfig& activityTrackingConfig = logConfig.activityTracking;
 
   _trackedCommandTypes.reserve(
       static_cast<decltype(_trackedCommandTypes)::size_type>(activityTrackingConfig.commandTypes.size()));
@@ -50,7 +50,7 @@ LoggingInfo::LoggingInfo(WithLoggersCreation withLoggersCreation, std::string_vi
   _alsoLogActivityForSimulatedCommands = activityTrackingConfig.withSimulatedCommands;
 }
 
-LoggingInfo::LoggingInfo(LoggingInfo &&rhs) noexcept
+LoggingInfo::LoggingInfo(LoggingInfo&& rhs) noexcept
     : _dataDir(std::move(rhs._dataDir)),
       _dateFormatStrActivityFiles(std::move(rhs._dateFormatStrActivityFiles)),
       _trackedCommandTypes(std::move(rhs._trackedCommandTypes)),
@@ -61,7 +61,7 @@ LoggingInfo::LoggingInfo(LoggingInfo &&rhs) noexcept
       _destroyOutputLogger(std::exchange(rhs._destroyOutputLogger, false)),
       _alsoLogActivityForSimulatedCommands(rhs._alsoLogActivityForSimulatedCommands) {}
 
-LoggingInfo &LoggingInfo::operator=(LoggingInfo &&rhs) noexcept {
+LoggingInfo& LoggingInfo::operator=(LoggingInfo&& rhs) noexcept {
   if (&rhs != this) {
     swap(rhs);
   }
@@ -91,13 +91,13 @@ void LoggingInfo::createLoggers() {
   FixedCapacityVector<log::sink_ptr, 2> sinks;
 
   if (_logLevelConsolePos != 0) {
-    auto &consoleSink = sinks.emplace_back(std::make_shared<log::sinks::stderr_color_sink_mt>());
+    auto& consoleSink = sinks.emplace_back(std::make_shared<log::sinks::stderr_color_sink_mt>());
     consoleSink->set_level(LevelFromPos(_logLevelConsolePos));
   }
 
   if (_logLevelFilePos != 0) {
     log::filename_t logFileName = log::filename_t(_dataDir) + log::filename_t("/log/log.txt");
-    auto &rotatingSink = sinks.emplace_back(std::make_shared<log::sinks::rotating_file_sink_mt>(
+    auto& rotatingSink = sinks.emplace_back(std::make_shared<log::sinks::rotating_file_sink_mt>(
         std::move(logFileName), _maxFileSizeLogFileInBytes, _maxNbLogFiles));
 
     rotatingSink->set_level(LevelFromPos(_logLevelFilePos));
@@ -120,7 +120,7 @@ void LoggingInfo::createLoggers() {
   createOutputLogger();
 }
 
-void LoggingInfo::swap(LoggingInfo &rhs) noexcept {
+void LoggingInfo::swap(LoggingInfo& rhs) noexcept {
   using std::swap;
 
   _dataDir.swap(rhs._dataDir);

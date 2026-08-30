@@ -15,7 +15,7 @@
 namespace cct {
 
 namespace details {
-inline void ToChars(char *first, std::integral auto sz, std::integral auto val) {
+inline void ToChars(char* first, std::integral auto sz, std::integral auto val) {
   const auto [ptr, errc] = std::to_chars(first, first + sz, val);
   if (errc != std::errc() || ptr != first + sz) {
     throw exception("Unable to decode integral into string");
@@ -43,8 +43,8 @@ inline auto IntegralToCharVector(std::integral auto val) {
 
   CharVector ret(static_cast<CharVector::size_type>(nchars(val)));
 
-  char *begPtr = ret.data();
-  char *endPtr = begPtr + ret.size();
+  char* begPtr = ret.data();
+  char* endPtr = begPtr + ret.size();
 
   const auto [ptr, errc] = std::to_chars(begPtr, endPtr, val);
   if (errc != std::errc() || ptr != endPtr) {
@@ -60,8 +60,8 @@ Integral StringToIntegral(std::string_view str) {
   // And in case of error, exception is thrown instead
   Integral ret;
 
-  const char *begPtr = str.data();
-  const char *endPtr = begPtr + str.size();
+  const char* begPtr = str.data();
+  const char* endPtr = begPtr + str.size();
   const auto [ptr, errc] = std::from_chars(begPtr, endPtr, ret);
 
   if (errc != std::errc()) {
@@ -77,7 +77,7 @@ Integral StringToIntegral(std::string_view str) {
   return ret;
 }
 
-inline void AppendIntegralToString(string &str, std::integral auto val) {
+inline void AppendIntegralToString(string& str, std::integral auto val) {
   const auto nbDigitsInt = nchars(val);
 
   str.append(nbDigitsInt, '0');

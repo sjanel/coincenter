@@ -18,7 +18,7 @@ MonetaryAmount BasicStats::movingAverageFromLastPublicTradesPrice(TimePoint olde
   const auto lastPublicTrades = _marketDataView.pastPublicTrades();
 
   for (auto publicTradeIt = lastPublicTrades.end(); publicTradeIt != lastPublicTrades.begin();) {
-    const PublicTrade &publicTrade = *(--publicTradeIt);
+    const PublicTrade& publicTrade = *(--publicTradeIt);
 
     if (publicTrade.time() < oldestTime) {
       break;
@@ -48,7 +48,7 @@ MonetaryAmount BasicStats::movingAverageFromMarketOrderBooks(TimePoint oldestTim
   TimePoint previousTime = TimePoint::max();
 
   while (orderBookIt != lastOrderBooks.begin()) {
-    const MarketOrderBook &marketOrderBook = *(--orderBookIt);
+    const MarketOrderBook& marketOrderBook = *(--orderBookIt);
     const auto ts = marketOrderBook.time();
 
     if (ts < oldestTime) {
@@ -99,7 +99,7 @@ MonetaryAmount BasicStats::standardDeviationFromMarketOrderBooks(TimePoint oldes
   TimePoint previousTime = TimePoint::max();
 
   while (orderBookIt != lastOrderBooks.begin()) {
-    const MarketOrderBook &marketOrderBook = *(--orderBookIt);
+    const MarketOrderBook& marketOrderBook = *(--orderBookIt);
     const auto ts = marketOrderBook.time();
 
     if (ts < oldestTime) {

@@ -160,7 +160,7 @@ TEST_F(ExchangeOrchestratorTest, GetOpenedOrders) {
 TEST_F(ExchangeOrchestratorTest, WithdrawSameAccountImpossible) {
   MonetaryAmount grossAmount{1000, "XRP"};
   ExchangeName fromExchange(exchange1.exchangeNameEnum(), exchange1.keyName());
-  const ExchangeName &toExchange = fromExchange;
+  const ExchangeName& toExchange = fromExchange;
   EXPECT_THROW(exchangesOrchestrator.withdraw(grossAmount, false, fromExchange, toExchange, withdrawOptions),
                exception);
 }
@@ -211,16 +211,16 @@ TEST_F(ExchangeOrchestratorTest, WithdrawImpossibleTo) {
   EXPECT_FALSE(deliveredWithdrawInfo.hasBeenInitiated());
 }
 
-inline bool operator==(const DeliveredWithdrawInfo &lhs, const DeliveredWithdrawInfo &rhs) {
+inline bool operator==(const DeliveredWithdrawInfo& lhs, const DeliveredWithdrawInfo& rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
 namespace api {
-inline bool operator==(const InitiatedWithdrawInfo &lhs, const InitiatedWithdrawInfo &rhs) {
+inline bool operator==(const InitiatedWithdrawInfo& lhs, const InitiatedWithdrawInfo& rhs) {
   return lhs.withdrawId() == rhs.withdrawId();
 }
 
-inline bool operator==(const SentWithdrawInfo &lhs, const SentWithdrawInfo &rhs) {
+inline bool operator==(const SentWithdrawInfo& lhs, const SentWithdrawInfo& rhs) {
   return lhs.withdrawStatus() == rhs.withdrawStatus() && lhs.netEmittedAmount() == rhs.netEmittedAmount();
 }
 }  // namespace api

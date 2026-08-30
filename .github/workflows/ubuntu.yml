@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        compiler: [g++-13, clang++-20]
+        compiler: [g++-13, clang++-21]
         buildmode: [Debug, Release]
 
     steps:
@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install cmake libssl-dev libzstd-dev libbrotli-dev ninja-build -y --no-install-recommends
+          sudo apt install cmake gcc-13 g++-13 libssl-dev libzstd-dev libbrotli-dev ninja-build -y --no-install-recommends
           echo "CC=$(echo ${{matrix.compiler}} | sed -e 's/^g++/gcc/' | sed 's/+//g')" >> $GITHUB_ENV
 
       - name: Install clang
@@ -34,7 +34,7 @@ jobs:
         if: startsWith(matrix.compiler, 'clang')
 
       - name: Configure CMake
-        run: cmake -S . -B build -GNinja
+        run: cmake -S . -B build -DCCT_ENABLE_ASAN=${{matrix.buildmode == 'Debug' && 'ON' || 'OFF'}} -GNinja
         env:
           CXX: ${{matrix.compiler}}
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}

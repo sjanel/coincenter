@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 
 #include "cct_string.hpp"
@@ -23,27 +24,41 @@ struct WithdrawInfoFileItem {
 
 using WithdrawInfoFile = std::unordered_map<ExchangeNameEnum, WithdrawInfoFileItem>;
 
-struct WithdrawFeesCrawlerExchangeFeesCoinSource1 {
-  string symbol;
+struct BithumbWithdrawalNetwork {
+  std::optional<string> withdraw_fee_quantity;
+  std::optional<string> withdraw_minimum_quantity;
 
-  auto operator<=>(const WithdrawFeesCrawlerExchangeFeesCoinSource1&) const = default;
+  auto operator<=>(const BithumbWithdrawalNetwork&) const = default;
 };
 
-struct WithdrawFeesCrawlerExchangeFeesSource1 {
-  double amount;
-  double min;
-  WithdrawFeesCrawlerExchangeFeesCoinSource1 coin;
+struct BithumbWithdrawalAsset {
+  string currency;
+  vector<BithumbWithdrawalNetwork> networks;
 
-  auto operator<=>(const WithdrawFeesCrawlerExchangeFeesSource1&) const = default;
+  auto operator<=>(const BithumbWithdrawalAsset&) const = default;
 };
 
-struct WithdrawFeesCrawlerExchangeSource1 {
-  string name;
-  vector<WithdrawFeesCrawlerExchangeFeesSource1> fees;
+using BithumbWithdrawalFees = vector<BithumbWithdrawalAsset>;
+
+struct KrakenWithdrawalNetwork {
+  string network;
+
+  auto operator<=>(const KrakenWithdrawalNetwork&) const = default;
 };
 
-struct WithdrawFeesCrawlerSource1 {
-  WithdrawFeesCrawlerExchangeSource1 exchange;
+struct KrakenWithdrawalMethod {
+  string asset;
+  string fee;
+  string min_amount;
+  KrakenWithdrawalNetwork withdrawal_network_info;
+
+  auto operator<=>(const KrakenWithdrawalMethod&) const = default;
+};
+
+struct KrakenWithdrawalMethodsResponse {
+  vector<KrakenWithdrawalMethod> result;
+
+  auto operator<=>(const KrakenWithdrawalMethodsResponse&) const = default;
 };
 
 }  // namespace cct::schema

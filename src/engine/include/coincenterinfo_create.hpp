@@ -9,9 +9,9 @@
 
 namespace cct {
 
-CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions,
+CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions& cmdLineOptions,
                                      settings::RunMode runMode);
 
-ExchangeSecretsInfo ExchangeSecretsInfo_Create(const CoincenterCmdLineOptions &cmdLineOptions);
+ExchangeSecretsInfo ExchangeSecretsInfo_Create(const CoincenterCmdLineOptions& cmdLineOptions);
 
 }  // namespace cct

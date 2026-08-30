@@ -49,15 +49,15 @@ class HttpClient {
   /// @param pMetricGateway if not null, queries will export some metrics
   /// @param permanentRequestOptions options applied once and for all requests of this HttpClient
   /// @param runMode run mode
-  explicit HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetricGateway = nullptr,
-                      const PermanentRequestOptions &permanentRequestOptions = PermanentRequestOptions(),
+  explicit HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway* pMetricGateway = nullptr,
+                      const PermanentRequestOptions& permanentRequestOptions = PermanentRequestOptions(),
                       settings::RunMode runMode = settings::RunMode::kProd);
 
-  HttpClient(const HttpClient &) = delete;
-  HttpClient &operator=(const HttpClient &) = delete;
+  HttpClient(const HttpClient&) = delete;
+  HttpClient& operator=(const HttpClient&) = delete;
 
-  HttpClient(HttpClient &&rhs) noexcept;
-  HttpClient &operator=(HttpClient &&rhs) noexcept;
+  HttpClient(HttpClient&& rhs) noexcept;
+  HttpClient& operator=(HttpClient&& rhs) noexcept;
 
   ~HttpClient();
 
@@ -65,7 +65,7 @@ class HttpClient {
   /// creation of this object.
   /// Response is returned as a std::string_view to a memory hold in cache by this HttpClient.
   /// The pointed memory is valid until a next call to 'query'.
-  std::string_view query(std::string_view endpoint, const HttpRequestOptions &opts);
+  std::string_view query(std::string_view endpoint, const HttpRequestOptions& opts);
 
   [[nodiscard]] std::string_view getNextBaseUrl() const { return _bestURLPicker.getNextBaseURL(); }
 
@@ -76,9 +76,9 @@ class HttpClient {
   /// given map).
   /// This should be used only for tests purposes, as the search for the matching query is of linear
   /// complexity in a flat key value string.
-  void setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap);
+  void setOverridenQueryResponses(const std::map<string, string>& queryResponsesMap);
 
-  void swap(HttpClient &rhs) noexcept;
+  void swap(HttpClient& rhs) noexcept;
 
   /// HttpClient is not trivially relocatable: the underlying aeronet::HttpClient owns an event loop
   /// and reusable buffers referenced by internal state.
@@ -89,8 +89,8 @@ class HttpClient {
   // behind a forward declaration is used - rather than a unique_ptr - so that clients including this
   // header (and the unit-test mocks that redefine this class' members) do not need the complete aeronet
   // type. A null pointer means the object runs in query-response override mode (unit tests).
-  aeronet::HttpClient *_client = nullptr;
-  AbstractMetricGateway *_pMetricGateway = nullptr;  // non-owning pointer
+  aeronet::HttpClient* _client = nullptr;
+  AbstractMetricGateway* _pMetricGateway = nullptr;  // non-owning pointer
   Duration _minDurationBetweenQueries{};
   TimePoint _lastQueryTime;
   BestURLPicker _bestURLPicker;

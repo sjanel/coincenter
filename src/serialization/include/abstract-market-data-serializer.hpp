@@ -14,7 +14,7 @@ class AbstractMarketDataSerializer {
   virtual ~AbstractMarketDataSerializer() = default;
 
   /// Push market order book in the MarketDataSerializer.
-  virtual void push(const MarketOrderBook &marketOrderBook) = 0;
+  virtual void push(const MarketOrderBook& marketOrderBook) = 0;
 
   /// Push public trades in the MarketDataSerializer.
   /// They should come from the same market.

@@ -31,7 +31,7 @@ namespace cct {
 class Exchange;
 
 template <class T>
-using ExchangeWith = std::pair<const Exchange *, T>;
+using ExchangeWith = std::pair<const Exchange*, T>;
 
 using MarketOrderBookConversionRate = std::tuple<ExchangeNameEnum, MarketOrderBook, std::optional<MonetaryAmount>>;
 
@@ -62,7 +62,7 @@ using ExchangeTickerMaps = FixedCapacityVector<ExchangeWith<MarketOrderBookMap>,
 
 using CurrenciesPerExchange = FixedCapacityVector<ExchangeWith<CurrencyExchangeFlatSet>, kNbSupportedExchanges>;
 
-using BalancePerExchange = SmallVector<std::pair<Exchange *, BalancePortfolio>, kTypicalNbPrivateAccounts>;
+using BalancePerExchange = SmallVector<std::pair<Exchange*, BalancePortfolio>, kTypicalNbPrivateAccounts>;
 
 using WalletPerExchange = SmallVector<ExchangeWith<Wallet>, kTypicalNbPrivateAccounts>;
 
@@ -74,7 +74,7 @@ using DepositsPerExchange = SmallVector<ExchangeWith<DepositsSet>, kTypicalNbPri
 
 using WithdrawsPerExchange = SmallVector<ExchangeWith<WithdrawsSet>, kTypicalNbPrivateAccounts>;
 
-using DeliveredWithdrawInfoWithExchanges = std::pair<std::array<const Exchange *, 2>, DeliveredWithdrawInfo>;
+using DeliveredWithdrawInfoWithExchanges = std::pair<std::array<const Exchange*, 2>, DeliveredWithdrawInfo>;
 
 using NbCancelledOrdersPerExchange = SmallVector<ExchangeWith<int>, kTypicalNbPrivateAccounts>;
 

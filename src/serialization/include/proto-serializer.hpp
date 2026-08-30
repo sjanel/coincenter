@@ -42,11 +42,11 @@ class ProtobufObjectsSerializer {
   /// Creates a new ProtobufObjectsSerializer.
   /// @param marketTimestampSet the latest written timestamp for all markets to avoid writing duplicate entries between
   /// coincenter restarts.
-  ProtobufObjectsSerializer(std::filesystem::path subPath, const MarketTimestampSet &marketTimestampSet,
+  ProtobufObjectsSerializer(std::filesystem::path subPath, const MarketTimestampSet& marketTimestampSet,
                             int32_t nbObjectsPerMarketInMemory)
       : _subPath(std::move(subPath)), _nbObjectsPerMarketInMemory(nbObjectsPerMarketInMemory) {
-    for (const auto &[market, timestamp] : marketTimestampSet) {
-      auto &lastWrittenObjectTimestamp = _marketDataMap[market].lastWrittenObjectTimestamp;
+    for (const auto& [market, timestamp] : marketTimestampSet) {
+      auto& lastWrittenObjectTimestamp = _marketDataMap[market].lastWrittenObjectTimestamp;
 
       lastWrittenObjectTimestamp = timestamp;
 
@@ -55,7 +55,7 @@ class ProtobufObjectsSerializer {
       // C++20 adds pre/post ++/-- for std::chrono::time_point (see [time.point]) but not all deployed libc++ versions
       // ship them yet (or you may be picking up an older Apple-provided libc++ while using a newer clang). We detect
       // support at compile time and fall back to adding one tick explicitly for portability.
-      if constexpr (requires(TimePoint &tp) { ++tp; }) {
+      if constexpr (requires(TimePoint& tp) { ++tp; }) {
         ++lastWrittenObjectTimestamp;  // preferred, when available
       } else {
         lastWrittenObjectTimestamp += TimePoint::duration{1};  // portable fallback (one tick of underlying duration)
@@ -63,12 +63,12 @@ class ProtobufObjectsSerializer {
     }
   }
 
-  ProtobufObjectsSerializer(const ProtobufObjectsSerializer &) = delete;
-  ProtobufObjectsSerializer &operator=(const ProtobufObjectsSerializer &) = delete;
+  ProtobufObjectsSerializer(const ProtobufObjectsSerializer&) = delete;
+  ProtobufObjectsSerializer& operator=(const ProtobufObjectsSerializer&) = delete;
 
-  ProtobufObjectsSerializer(ProtobufObjectsSerializer &&other) noexcept { swap(other); }
+  ProtobufObjectsSerializer(ProtobufObjectsSerializer&& other) noexcept { swap(other); }
 
-  ProtobufObjectsSerializer &operator=(ProtobufObjectsSerializer &&other) noexcept {
+  ProtobufObjectsSerializer& operator=(ProtobufObjectsSerializer&& other) noexcept {
     if (&other != this) {
       swap(other);
     }
@@ -78,10 +78,10 @@ class ProtobufObjectsSerializer {
   /// At destruction of the serializer, we try to write all remaining objects in the buffer (as best effort mode).
   ~ProtobufObjectsSerializer() {
     try {
-      for (auto &[market, marketData] : _marketDataMap) {
+      for (auto& [market, marketData] : _marketDataMap) {
         writeOnDisk(market, marketData);
       }
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       log::error("exception caught in writeOnDisk at ProtobufObjectsSerializer destruction: {}", e.what());
     }
   }
@@ -91,12 +91,12 @@ class ProtobufObjectsSerializer {
   ///  - its timestamp is older than the latest written timestamp of this market
   ///  - it has invalid data
   template <class ProtobufObjectTypeU>
-  void push(Market market, ProtobufObjectTypeU &&protoObj) {
+  void push(Market market, ProtobufObjectTypeU&& protoObj) {
     if (!protoObj.has_unixtimestampinms()) {
       throw exception("Attempt to push proto object without any timestamp");
     }
 
-    auto &marketData = _marketDataMap[market];
+    auto& marketData = _marketDataMap[market];
     if (TimePoint{milliseconds{protoObj.unixtimestampinms()}} < marketData.lastWrittenObjectTimestamp) {
       // do not push an object that has an older timestamp of the last written object
       return;
@@ -107,7 +107,7 @@ class ProtobufObjectsSerializer {
     checkWriteOnDisk(market, marketData);
   }
 
-  void swap(ProtobufObjectsSerializer &rhs) noexcept {
+  void swap(ProtobufObjectsSerializer& rhs) noexcept {
     _marketDataMap.swap(rhs._marketDataMap);
     _subPath.swap(rhs._subPath);
     std::swap(_nbObjectsPerMarketInMemory, rhs._nbObjectsPerMarketInMemory);
@@ -122,8 +122,8 @@ class ProtobufObjectsSerializer {
     TimePoint lastWrittenObjectTimestamp;
   };
 
-  void checkWriteOnDisk(Market market, MarketData &marketData) {
-    auto &dataVector = marketData.dataVector;
+  void checkWriteOnDisk(Market market, MarketData& marketData) {
+    auto& dataVector = marketData.dataVector;
     if (dataVector.size() == static_cast<ProtobufObjectTypeVector::size_type>(_nbObjectsPerMarketInMemory)) {
       writeOnDisk(market, marketData);
 
@@ -135,8 +135,8 @@ class ProtobufObjectsSerializer {
     }
   }
 
-  void writeOnDisk(Market market, MarketData &marketData) {
-    auto &dataVector = marketData.dataVector;
+  void writeOnDisk(Market market, MarketData& marketData) {
+    auto& dataVector = marketData.dataVector;
     if (dataVector.empty()) {
       return;
     }
@@ -151,7 +151,7 @@ class ProtobufObjectsSerializer {
 
     ProtobufMessagesCompressedWriter<std::ofstream> protobufMessagesWriter;
 
-    for (const auto &protobufObject : dataVector) {
+    for (const auto& protobufObject : dataVector) {
       checkOpenFile(market, protobufObject, prevHourOfDay, path, protobufMessagesWriter);
 
       protobufMessagesWriter.write(protobufObject);
@@ -182,7 +182,7 @@ class ProtobufObjectsSerializer {
       if (it->second.lastWrittenObjectTimestamp + DurationType{static_cast<int64_t>(DurationValue)} < nowTime) {
         // Unchanged data since a long time - write data if any, and clears the entry in the map
         const Market market = it->first;
-        MarketData &marketData = it->second;
+        MarketData& marketData = it->second;
 
         writeOnDisk(market, marketData);
 
@@ -197,12 +197,12 @@ class ProtobufObjectsSerializer {
     _marketDataMap.rehash(_marketDataMap.size());
   }
 
-  static void SortUnique(ProtobufObjectTypeVector &dataVector) {
+  static void SortUnique(ProtobufObjectTypeVector& dataVector) {
     static_assert((std::is_void_v<Comp> && std::is_void_v<Equal>) || (!std::is_void_v<Comp> && !std::is_void_v<Equal>));
 
     if constexpr (std::is_void_v<Comp>) {
       // Sort by timestamp (required by 'writeOnDisk' algorithm)
-      std::ranges::sort(dataVector, [](const auto &lhs, const auto &rhs) {
+      std::ranges::sort(dataVector, [](const auto& lhs, const auto& rhs) {
         return lhs.unixtimestampinms() < rhs.unixtimestampinms();
       });
     } else {
@@ -218,9 +218,9 @@ class ProtobufObjectsSerializer {
     }
   }
 
-  void checkOpenFile(Market market, const ProtobufObjectType &protobufObject, std::chrono::hours &prevHourOfDay,
-                     std::filesystem::path &path,
-                     ProtobufMessagesCompressedWriter<std::ofstream> &protobufMessagesWriter) {
+  void checkOpenFile(Market market, const ProtobufObjectType& protobufObject, std::chrono::hours& prevHourOfDay,
+                     std::filesystem::path& path,
+                     ProtobufMessagesCompressedWriter<std::ofstream>& protobufMessagesWriter) {
     const TimePoint tp{milliseconds{protobufObject.unixtimestampinms()}};
     const auto hourOfDay = GetHourOfDay(tp);
 
@@ -250,7 +250,7 @@ class ProtobufObjectsSerializer {
     return std::chrono::floor<std::chrono::hours>(tp - dp);
   }
 
-  void setDirectory(std::string_view marketStr, TimePoint tp, std::filesystem::path &path) {
+  void setDirectory(std::string_view marketStr, TimePoint tp, std::filesystem::path& path) {
     const auto dp = std::chrono::floor<std::chrono::days>(tp);
     const std::chrono::year_month_day ymd{dp};
 

@@ -66,7 +66,7 @@ TEST_F(ExchangeRetrieverTest, EmptySelection) {
 
   ExchangeRetriever::SelectedExchanges expected;
   std::ranges::transform(kAllExchanges, std::back_inserter(expected),
-                         [](auto &exchange) { return std::addressof(exchange); });
+                         [](auto& exchange) { return std::addressof(exchange); });
 
   EXPECT_EQ(exchangeRetriever.select(ExchangeRetriever::Order::kInitial, ExchangeNames{}), expected);
   EXPECT_EQ(exchangeRetriever.select(ExchangeRetriever::Order::kSelection, ExchangeNames{}), expected);
@@ -79,12 +79,12 @@ TEST_F(ExchangeRetrieverTest, RetrieveUniqueCandidate) {
 
   EXPECT_THROW(exchangeRetriever.retrieveUniqueCandidate(ExchangeName("bithumb")), exception);
 
-  auto &bithumbUser1 = exchangeRetriever.retrieveUniqueCandidate(ExchangeName("bithumb_user1"));
+  auto& bithumbUser1 = exchangeRetriever.retrieveUniqueCandidate(ExchangeName("bithumb_user1"));
 
   EXPECT_EQ(bithumbUser1.name(), "bithumb");
   EXPECT_EQ(bithumbUser1.keyName(), "user1");
 
-  auto &krakenUser1 = exchangeRetriever.retrieveUniqueCandidate(ExchangeName("kraken"));
+  auto& krakenUser1 = exchangeRetriever.retrieveUniqueCandidate(ExchangeName("kraken"));
 
   EXPECT_EQ(krakenUser1.name(), "kraken");
   EXPECT_EQ(krakenUser1.keyName(), "user1");

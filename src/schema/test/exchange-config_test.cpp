@@ -172,11 +172,11 @@ TEST_F(ExchangeConfigTest, DirectRead) {
   EXPECT_EQ(exchangeConfigOptional.asset.def.preferredPaymentCurrencies.size(), 2);
   EXPECT_EQ(exchangeConfigOptional.asset.exchange.size(), 2);
   const auto binanceAsset = std::ranges::find_if(
-      exchangeConfigOptional.asset.exchange, [](const auto &pair) { return pair.first == ExchangeNameEnum::binance; });
+      exchangeConfigOptional.asset.exchange, [](const auto& pair) { return pair.first == ExchangeNameEnum::binance; });
   EXPECT_NE(binanceAsset, exchangeConfigOptional.asset.exchange.end());
   EXPECT_EQ(binanceAsset->second.allExclude.size(), 1);
   const auto krakenAsset = std::ranges::find_if(
-      exchangeConfigOptional.asset.exchange, [](const auto &pair) { return pair.first == ExchangeNameEnum::kraken; });
+      exchangeConfigOptional.asset.exchange, [](const auto& pair) { return pair.first == ExchangeNameEnum::kraken; });
   EXPECT_NE(krakenAsset, exchangeConfigOptional.asset.exchange.end());
   EXPECT_EQ(krakenAsset->second.withdrawExclude.size(), 1);
   EXPECT_EQ(exchangeConfigOptional.query.def.acceptEncoding, "");
@@ -203,7 +203,7 @@ TEST_F(ExchangeConfigTest, DirectRead) {
   EXPECT_EQ(exchangeConfigOptional.query.def.validateApiKey, false);
   EXPECT_EQ(exchangeConfigOptional.query.exchange.size(), 6);
   const auto binanceQuery = std::ranges::find_if(
-      exchangeConfigOptional.query.exchange, [](const auto &pair) { return pair.first == ExchangeNameEnum::binance; });
+      exchangeConfigOptional.query.exchange, [](const auto& pair) { return pair.first == ExchangeNameEnum::binance; });
   EXPECT_EQ(binanceQuery->second.acceptEncoding, "gzip,deflate");
 }
 

@@ -43,13 +43,13 @@ constexpr EnumT EnumFromString(std::string_view str) {
     std::array<KeyIdx, std::size(keys)> sortedKeys;
     std::ranges::transform(keys, sortedKeys.begin(), [i = 0U](auto key) mutable { return KeyIdx{key, i++}; });
 
-    std::ranges::sort(sortedKeys, [](const auto &lhs, const auto &rhs) { return lhs.key < rhs.key; });
+    std::ranges::sort(sortedKeys, [](const auto& lhs, const auto& rhs) { return lhs.key < rhs.key; });
     return sortedKeys;
   }();
 
   auto pos =
       std::ranges::lower_bound(kSortedKeys, KeyIdx{str, 0},
-                               [](const auto &lhs, const auto &rhs) {
+                               [](const auto& lhs, const auto& rhs) {
                                  return CaseInsensitive ? CaseInsensitiveLess(lhs.key, rhs.key) : lhs.key < rhs.key;
                                }) -
       std::begin(kSortedKeys);

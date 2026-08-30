@@ -61,7 +61,7 @@ struct CurrencyCodeBase {
            kFirstAuthorizedLetter;
   }
 
-  static constexpr void ValidateChar(char &ch) {
+  static constexpr void ValidateChar(char& ch) {
     if (ch >= 'a') {
       if (ch > 'z') {
         throw invalid_argument("Unexpected char '{}' in currency acronym", ch);
@@ -98,22 +98,22 @@ class CurrencyCodeIterator {
   using difference_type = std::ptrdiff_t;
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = char;
-  using pointer = const char *;
-  using reference = const char &;
+  using pointer = const char*;
+  using reference = const char&;
 
   // Public default constructor needed for an iterator in C++20
   CurrencyCodeIterator() noexcept = default;
 
-  constexpr std::strong_ordering operator<=>(const CurrencyCodeIterator &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyCodeIterator&) const noexcept = default;
 
-  constexpr bool operator==(const CurrencyCodeIterator &) const noexcept = default;
+  constexpr bool operator==(const CurrencyCodeIterator&) const noexcept = default;
 
-  constexpr CurrencyCodeIterator &operator++() noexcept {  // Prefix increment
+  constexpr CurrencyCodeIterator& operator++() noexcept {  // Prefix increment
     ++_pos;
     return *this;
   }
 
-  constexpr CurrencyCodeIterator &operator--() noexcept {  // Prefix decrement
+  constexpr CurrencyCodeIterator& operator--() noexcept {  // Prefix decrement
     --_pos;
     return *this;
   }
@@ -233,7 +233,7 @@ class CurrencyCode {
     }
   }
 
-  constexpr void assign(const char *buf, size_type sz) { *this = CurrencyCode(std::string_view(buf, sz)); }
+  constexpr void assign(const char* buf, size_type sz) { *this = CurrencyCode(std::string_view(buf, sz)); }
 
   [[nodiscard]] constexpr size_type length() const noexcept { return size(); }
 
@@ -264,7 +264,7 @@ class CurrencyCode {
 
   /// Append currency string representation to given string.
   template <class StringT>
-  void appendStrTo(StringT &str) const {
+  void appendStrTo(StringT& str) const {
     const auto len = size();
     str.append(len, '\0');
     appendTo(str.end() - len);
@@ -296,11 +296,11 @@ class CurrencyCode {
   }
 
   /// Note that this respects the lexicographical order - chars are encoded from the most significant bits first
-  constexpr std::strong_ordering operator<=>(const CurrencyCode &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyCode&) const noexcept = default;
 
-  constexpr bool operator==(const CurrencyCode &) const noexcept = default;
+  constexpr bool operator==(const CurrencyCode&) const noexcept = default;
 
-  friend std::ostream &operator<<(std::ostream &os, const CurrencyCode &cur) {
+  friend std::ostream& operator<<(std::ostream& os, const CurrencyCode& cur) {
     for (size_type charPos = 0; charPos < kMaxLen; ++charPos) {
       const char ch = cur[charPos];
       if (ch == CurrencyCodeBase::kFirstAuthorizedLetter) {
@@ -352,7 +352,7 @@ class CurrencyCode {
   }
 
   /// Append currency string representation to given string, with a space before (used by MonetaryAmount)
-  void appendStrWithSpaceTo(string &str) const {
+  void appendStrWithSpaceTo(string& str) const {
     const auto len = size();
     str.append(len + 1UL, ' ');
     appendTo(str.end() - len);
@@ -366,7 +366,7 @@ static_assert(std::ranges::bidirectional_range<CurrencyCode>);
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::CurrencyCode> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -376,7 +376,7 @@ struct fmt::formatter<cct::CurrencyCode> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::CurrencyCode &cur, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::CurrencyCode& cur, FormatContext& ctx) const -> decltype(ctx.out()) {
     return cur.appendTo(ctx.out());
   }
 };
@@ -386,7 +386,7 @@ struct fmt::formatter<cct::CurrencyCode> {
 namespace std {
 template <>
 struct hash<::cct::CurrencyCode> {
-  auto operator()(const ::cct::CurrencyCode &currencyCode) const { return ::cct::HashValue64(currencyCode.code()); }
+  auto operator()(const ::cct::CurrencyCode& currencyCode) const { return ::cct::HashValue64(currencyCode.code()); }
 };
 }  // namespace std
 
@@ -394,7 +394,7 @@ namespace glz {
 template <>
 struct from<JSON, ::cct::CurrencyCode> {
   template <auto Opts, class It, class End>
-  static void op(auto &&value, is_context auto &&, It &&it, End &&end) noexcept {
+  static void op(auto&& value, is_context auto&&, It&& it, End&& end) noexcept {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
     value = std::string_view(it, endIt);
@@ -405,7 +405,7 @@ struct from<JSON, ::cct::CurrencyCode> {
 template <>
 struct to<JSON, ::cct::CurrencyCode> {
   template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+  static void op(auto&& value, Ctx&&, B&& b, IX&& ix) {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };

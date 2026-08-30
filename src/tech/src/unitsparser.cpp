@@ -68,8 +68,8 @@ constexpr std::pair<int64_t, std::string_view> kBytesUnits[] = {{static_cast<int
 }
 
 std::span<char> BytesToBuffer(int64_t numberOfBytes, std::span<char> buf, int nbSignificantUnits) {
-  char *begBuf = buf.data();
-  char *endBuf = begBuf + buf.size();
+  char* begBuf = buf.data();
+  char* endBuf = begBuf + buf.size();
 
   if (numberOfBytes < 0) {
     *begBuf = '-';

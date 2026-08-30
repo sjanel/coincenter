@@ -21,6 +21,9 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-24.04
+    env:
+      CC: gcc-13
+      CXX: g++-13
 
     permissions:
       actions: read
@@ -53,7 +56,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install build-essential ninja-build libssl-dev libzstd-dev libbrotli-dev cmake git ca-certificates -y --no-install-recommends
+          sudo apt install build-essential gcc-13 g++-13 ninja-build libssl-dev libzstd-dev libbrotli-dev cmake git ca-certificates -y --no-install-recommends
 
       - name: Configure CMake
         run: cmake -S . -B build -GNinja

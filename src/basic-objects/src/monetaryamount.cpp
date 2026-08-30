@@ -33,16 +33,16 @@ namespace {
 /// Theorem 15
 constexpr int kNbMaxDoubleDecimals = std::numeric_limits<double>::max_digits10;
 
-constexpr void RemovePrefixSpaces(std::string_view &str) {
+constexpr void RemovePrefixSpaces(std::string_view& str) {
   str.remove_prefix(std::ranges::find_if(str, [](char ch) { return ch != ' '; }) - str.begin());
 }
 
-constexpr void RemoveTrailingSpaces(std::string_view &str) {
+constexpr void RemoveTrailingSpaces(std::string_view& str) {
   str.remove_suffix(std::ranges::find_if(std::ranges::reverse_view(str), [](char ch) { return ch != ' '; }) -
                     std::ranges::rbegin(str));
 }
 
-inline int ParseNegativeChar(std::string_view &amountStr) {
+inline int ParseNegativeChar(std::string_view& amountStr) {
   int negMult = 1;
   if (amountStr.empty()) {
     return negMult;
@@ -67,7 +67,7 @@ inline int ParseNegativeChar(std::string_view &amountStr) {
   return negMult;
 }
 
-inline MonetaryAmount::AmountType HeuristicRounding(std::size_t dotPos, std::string_view &amountStr) {
+inline MonetaryAmount::AmountType HeuristicRounding(std::size_t dotPos, std::string_view& amountStr) {
   static constexpr std::string_view kHeuristicRoundingPatterns[] = {"000", "999"};
 
   std::size_t bestFindPos = 0;
@@ -266,7 +266,7 @@ constexpr MonetaryAmount::AmountType MonetaryAmount::decimalPart() const {
 
 namespace {
 
-constexpr auto SafeConvertSameDecimals(MonetaryAmount::AmountType &lhsAmount, MonetaryAmount::AmountType &rhsAmount,
+constexpr auto SafeConvertSameDecimals(MonetaryAmount::AmountType& lhsAmount, MonetaryAmount::AmountType& rhsAmount,
                                        int8_t lhsNbDecimals, int8_t rhsNbDecimals) {
   int lhsNbDigits = ndigits(lhsAmount);
   int rhsNbDigits = ndigits(rhsAmount);
@@ -366,7 +366,7 @@ bool MonetaryAmount::isCloseTo(MonetaryAmount otherAmount, double relativeDiffer
   return closestAmount > boundMin && closestAmount < boundMax;
 }
 
-std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount &other) const {
+std::strong_ordering MonetaryAmount::operator<=>(const MonetaryAmount& other) const {
   if (currencyCode() != other.currencyCode()) {
     throw exception("Cannot compare amounts with different currency");
   }
@@ -550,6 +550,6 @@ MonetaryAmount MonetaryAmount::operator/(MonetaryAmount div) const {
   return {static_cast<AmountType>(totalIntPart) * negMult, resCurrency, nbDecs};
 }
 
-std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma) { return os << ma.str(); }
+std::ostream& operator<<(std::ostream& os, const MonetaryAmount& ma) { return os << ma.str(); }
 
 }  // namespace cct

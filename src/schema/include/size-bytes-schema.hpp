@@ -12,7 +12,7 @@
 namespace cct::schema {
 
 struct SizeBytes {
-  auto operator<=>(const SizeBytes &) const noexcept = default;
+  auto operator<=>(const SizeBytes&) const noexcept = default;
 
   int64_t sizeInBytes{};
 };
@@ -22,7 +22,7 @@ struct SizeBytes {
 namespace std {
 template <>
 struct hash<::cct::schema::SizeBytes> {
-  auto operator()(const ::cct::schema::SizeBytes &val) const {
+  auto operator()(const ::cct::schema::SizeBytes& val) const {
     return ::cct::HashValue64(static_cast<uint64_t>(val.sizeInBytes));
   }
 };
@@ -37,7 +37,7 @@ namespace glz {
 template <>
 struct from<JSON, ::cct::schema::SizeBytes> {
   template <auto Opts, class It, class End>
-  static void op(auto &&value, is_context auto &&, It &&it, End &&end) {
+  static void op(auto&& value, is_context auto&&, It&& it, End&& end) {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
     value.sizeInBytes = ::cct::ParseNumberOfBytes(std::string_view(it, endIt));
@@ -48,7 +48,7 @@ struct from<JSON, ::cct::schema::SizeBytes> {
 template <>
 struct to<JSON, ::cct::schema::SizeBytes> {
   template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+  static void op(auto&& value, Ctx&&, B&& b, IX&& ix) {
     const auto adjustedBuf = ::cct::BytesToStr(value.sizeInBytes);
     const auto valueLen = adjustedBuf.size();
     const bool withQuotes = ::cct::details::JsonWithQuotes<Opts>(b, ix);

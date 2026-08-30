@@ -17,14 +17,14 @@ class InitiatedWithdrawInfo {
   InitiatedWithdrawInfo() noexcept = default;
 
   /// Empty InitiatedWithdrawInfo, when no withdrawal has been done
-  explicit InitiatedWithdrawInfo(string &&msg) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
+  explicit InitiatedWithdrawInfo(string&& msg) : _withdrawIdOrMsgIfNotInitiated(std::move(msg)) {}
 
   InitiatedWithdrawInfo(Wallet receivingWallet, std::string_view withdrawId, MonetaryAmount grossEmittedAmount,
                         TimePoint initiatedTime = Clock::now());
 
   TimePoint initiatedTime() const { return _initiatedTime; }
 
-  const Wallet &receivingWallet() const { return _receivingWallet; }
+  const Wallet& receivingWallet() const { return _receivingWallet; }
 
   std::string_view withdrawId() const { return _withdrawIdOrMsgIfNotInitiated; }
 
@@ -88,11 +88,11 @@ class DeliveredWithdrawInfo {
   DeliveredWithdrawInfo() = default;
 
   /// Empty withdraw info, when no withdrawal has been done
-  explicit DeliveredWithdrawInfo(string &&msg) : _initiatedWithdrawInfo(std::move(msg)) {}
+  explicit DeliveredWithdrawInfo(string&& msg) : _initiatedWithdrawInfo(std::move(msg)) {}
 
   /// Constructs a withdraw info with all information
-  DeliveredWithdrawInfo(api::InitiatedWithdrawInfo &&initiatedWithdrawInfo,
-                        api::ReceivedWithdrawInfo &&receivedWithdrawInfo);
+  DeliveredWithdrawInfo(api::InitiatedWithdrawInfo&& initiatedWithdrawInfo,
+                        api::ReceivedWithdrawInfo&& receivedWithdrawInfo);
 
   TimePoint initiatedTime() const { return _initiatedWithdrawInfo.initiatedTime(); }
 
@@ -100,7 +100,7 @@ class DeliveredWithdrawInfo {
 
   TimePoint receivedTime() const { return _receivedWithdrawInfo.receivedTime(); }
 
-  const Wallet &receivingWallet() const { return _initiatedWithdrawInfo.receivingWallet(); }
+  const Wallet& receivingWallet() const { return _initiatedWithdrawInfo.receivingWallet(); }
 
   MonetaryAmount grossAmount() const { return _initiatedWithdrawInfo.grossEmittedAmount(); }
 
@@ -122,7 +122,7 @@ class DeliveredWithdrawInfo {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::DeliveredWithdrawInfo> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -132,7 +132,7 @@ struct fmt::formatter<cct::DeliveredWithdrawInfo> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::DeliveredWithdrawInfo &wi, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::DeliveredWithdrawInfo& wi, FormatContext& ctx) const -> decltype(ctx.out()) {
     return fmt::format_to(ctx.out(), "[{}] -> [{}]@{:ek}", wi.grossAmount(), wi.receivedAmount(),
                           wi.receivingWallet().exchangeName());
   }

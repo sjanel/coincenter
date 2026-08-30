@@ -6,13 +6,13 @@
 
 namespace cct {
 
-::proto::PublicTrade ConvertPublicTradeToProto(const PublicTrade &publicTrade);
+::proto::PublicTrade ConvertPublicTradeToProto(const PublicTrade& publicTrade);
 
 class PublicTradeConverter {
  public:
   explicit PublicTradeConverter(Market market) : _market(market) {}
 
-  PublicTrade operator()(const ::proto::PublicTrade &protoPublicTrade) const;
+  PublicTrade operator()(const ::proto::PublicTrade& protoPublicTrade) const;
 
  private:
   Market _market;

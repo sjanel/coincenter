@@ -50,13 +50,13 @@ class CurrencyExchange {
   bool isFiat() const { return _isFiat; }
 
   // Compare by standard code first.
-  constexpr std::strong_ordering operator<=>(const CurrencyExchange &) const noexcept = default;
+  constexpr std::strong_ordering operator<=>(const CurrencyExchange&) const noexcept = default;
 
-  constexpr bool operator==(const CurrencyExchange &) const noexcept = default;
+  constexpr bool operator==(const CurrencyExchange&) const noexcept = default;
 
   operator CurrencyCode() const { return _standardCode; }
 
-  friend std::ostream &operator<<(std::ostream &os, const CurrencyExchange &currencyExchange);
+  friend std::ostream& operator<<(std::ostream& os, const CurrencyExchange& currencyExchange);
 
  private:
   CurrencyCode _standardCode;
