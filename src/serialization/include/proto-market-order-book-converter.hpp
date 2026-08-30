@@ -6,13 +6,13 @@
 
 namespace cct {
 
-::proto::MarketOrderBook ConvertMarketOrderBookToProto(const MarketOrderBook &marketOrderBook);
+::proto::MarketOrderBook ConvertMarketOrderBookToProto(const MarketOrderBook& marketOrderBook);
 
 class MarketOrderBookConverter {
  public:
   explicit MarketOrderBookConverter(Market market) : _market(market) {}
 
-  MarketOrderBook operator()(const ::proto::MarketOrderBook &marketOrderBookTimedData);
+  MarketOrderBook operator()(const ::proto::MarketOrderBook& marketOrderBookTimedData);
 
  private:
   Market _market;

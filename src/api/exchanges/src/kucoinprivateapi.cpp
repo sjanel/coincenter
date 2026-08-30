@@ -21,9 +21,6 @@
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "deposit.hpp"
 #include "depositsconstraints.hpp"
@@ -32,6 +29,9 @@
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "kucoin-schema.hpp"
 #include "kucoinpublicapi.hpp"
@@ -72,8 +72,8 @@ auto ComputeBaseStrToSign(HttpRequestType requestType, std::string_view method, 
 }
 
 HttpRequestOptions CreateHttpRequestOptions(const APIKey& apiKey, HttpRequestType requestType, std::string_view method,
-                              string& strToSign, std::string_view nonceTimeStr,
-                              HttpPostData&& postData = HttpPostData()) {
+                                            string& strToSign, std::string_view nonceTimeStr,
+                                            HttpPostData&& postData = HttpPostData()) {
   HttpRequestOptions::PostDataFormat postDataFormat = HttpRequestOptions::PostDataFormat::kString;
   if (postData.empty()) {
     ComputeBaseStrToSign(requestType, method, 0UL, nonceTimeStr, strToSign);
@@ -202,8 +202,8 @@ bool EnsureEnoughAmountIn(HttpClient& httpClient, const APIKey& apiKey, Monetary
 
 KucoinPrivate::KucoinPrivate(const CoincenterInfo& coincenterInfo, KucoinPublic& kucoinPublic, const APIKey& apiKey)
     : ExchangePrivate(coincenterInfo, kucoinPublic, apiKey),
-      _httpClient(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
-                  coincenterInfo.getRunMode()),
+      _httpClient(KucoinPublic::kUrlBase, coincenterInfo.metricGatewayPtr(),
+                  permanentHttpRequestOptionsBuilder().build(), coincenterInfo.getRunMode()),
       _depositWalletsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::depositWallet), _cachedResultVault),
           _httpClient, _apiKey, kucoinPublic) {}

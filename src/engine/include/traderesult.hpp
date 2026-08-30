@@ -13,9 +13,9 @@ class TradeResult {
 
   TradeResult() noexcept = default;
 
-  TradeResult(const TradedAmounts &tradedAmounts, MonetaryAmount from) : _tradedAmounts(tradedAmounts), _from(from) {}
+  TradeResult(const TradedAmounts& tradedAmounts, MonetaryAmount from) : _tradedAmounts(tradedAmounts), _from(from) {}
 
-  const TradedAmounts &tradedAmounts() const { return _tradedAmounts; }
+  const TradedAmounts& tradedAmounts() const { return _tradedAmounts; }
 
   MonetaryAmount from() const { return _from; }
 
@@ -23,7 +23,7 @@ class TradeResult {
 
   State state() const;
 
-  constexpr bool operator==(const TradeResult &) const noexcept = default;
+  constexpr bool operator==(const TradeResult&) const noexcept = default;
 
  private:
   TradedAmounts _tradedAmounts;

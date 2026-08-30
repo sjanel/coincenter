@@ -16,10 +16,10 @@ class MarketOrderBook;
 /// Useful if coincenter is not compiled with protobuf support.
 class DummyMarketDataSerializer : public AbstractMarketDataSerializer {
  public:
-  DummyMarketDataSerializer(std::string_view dataDir, const MarketTimestampSets &lastWrittenObjectsMarketTimestamp,
+  DummyMarketDataSerializer(std::string_view dataDir, const MarketTimestampSets& lastWrittenObjectsMarketTimestamp,
                             std::string_view exchangeName);
 
-  void push(const MarketOrderBook &marketOrderBook) override;
+  void push(const MarketOrderBook& marketOrderBook) override;
 
   void push(Market market, std::span<const PublicTrade> publicTrades) override;
 };

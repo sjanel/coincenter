@@ -230,7 +230,7 @@ TEST(CurrencyCodeTest, Iterator) {
 }
 
 struct Foo {
-  bool operator==(const Foo &) const noexcept = default;
+  bool operator==(const Foo&) const noexcept = default;
 
   CurrencyCode currencyCode;
 };
@@ -239,7 +239,8 @@ TEST(CurrencyCodeTest, JsonSerializationValue) {
   Foo foo{"DOGE"};
 
   string buffer;
-  auto res = json::write<json::opts_ex{.raw_string = true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
+  auto res =
+      json::write<json::opts_ex{.raw_string = true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -254,7 +255,8 @@ TEST(CurrencyCodeTest, JsonSerializationVector) {
   Bar bar;
 
   string buffer;
-  auto res = json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+  auto res =
+      json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 

@@ -9,25 +9,25 @@
 
 namespace cct::api {
 
-void ClosestRecentDepositPicker::push_back(const RecentDeposit &recentDeposit) {
+void ClosestRecentDepositPicker::push_back(const RecentDeposit& recentDeposit) {
   _recentDeposits.push_back(recentDeposit);
   _recentDeposits.back()._originalPos = static_cast<int>(_recentDeposits.size()) - 1;
 }
 
-void ClosestRecentDepositPicker::push_back(RecentDeposit &&recentDeposit) {
+void ClosestRecentDepositPicker::push_back(RecentDeposit&& recentDeposit) {
   recentDeposit._originalPos = static_cast<int>(_recentDeposits.size());
   _recentDeposits.push_back(std::move(recentDeposit));
 }
 
-int ClosestRecentDepositPicker::pickClosestRecentDepositPos(const RecentDeposit &expectedDeposit) {
-  const RecentDeposit *pClosestRecentDeposit = selectClosestRecentDeposit(expectedDeposit);
+int ClosestRecentDepositPicker::pickClosestRecentDepositPos(const RecentDeposit& expectedDeposit) {
+  const RecentDeposit* pClosestRecentDeposit = selectClosestRecentDeposit(expectedDeposit);
   if (pClosestRecentDeposit == nullptr) {
     return -1;
   }
   return pClosestRecentDeposit->_originalPos;
 }
 
-const RecentDeposit *ClosestRecentDepositPicker::selectClosestRecentDeposit(const RecentDeposit &expectedDeposit) {
+const RecentDeposit* ClosestRecentDepositPicker::selectClosestRecentDeposit(const RecentDeposit& expectedDeposit) {
   if (_recentDeposits.empty()) {
     log::debug("No recent deposits yet");
     return nullptr;
@@ -35,11 +35,11 @@ const RecentDeposit *ClosestRecentDepositPicker::selectClosestRecentDeposit(cons
 
   // First step: sort from most recent to oldest
   std::ranges::sort(_recentDeposits,
-                    [](const auto &lhs, const auto &rhs) { return lhs.timePoint() > rhs.timePoint(); });
+                    [](const auto& lhs, const auto& rhs) { return lhs.timePoint() > rhs.timePoint(); });
 
   // Heuristic - before considering the amounts, only take the most recent deposits (1 day as upper security bound to
   // avoid potential UTC differences)
-  auto endIt = std::ranges::partition_point(_recentDeposits, [&expectedDeposit](const RecentDeposit &deposit) {
+  auto endIt = std::ranges::partition_point(_recentDeposits, [&expectedDeposit](const RecentDeposit& deposit) {
     return deposit.timePoint() + std::chrono::days(1) > expectedDeposit.timePoint();
   });
 
@@ -54,7 +54,7 @@ const RecentDeposit *ClosestRecentDepositPicker::selectClosestRecentDeposit(cons
   }
 
   // Sort by amount difference
-  std::sort(_recentDeposits.begin(), endIt, [&expectedDeposit](const auto &lhs, const auto &rhs) {
+  std::sort(_recentDeposits.begin(), endIt, [&expectedDeposit](const auto& lhs, const auto& rhs) {
     auto diffLhs = (lhs.amount() - expectedDeposit.amount()).abs();
     auto diffRhs = (rhs.amount() - expectedDeposit.amount()).abs();
     if (diffLhs != diffRhs) {

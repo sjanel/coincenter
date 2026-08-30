@@ -15,15 +15,15 @@ CoincenterCommandsIterator::CoincenterCommandsIterator(CoincenterCommandSpan com
 namespace {
 using PublicExchangePresenceBitset = std::bitset<kNbSupportedExchanges>;
 
-bool UpdateBitsetAreNewExchanges(const CoincenterCommand &command,
-                                 PublicExchangePresenceBitset &publicExchangePresence) {
+bool UpdateBitsetAreNewExchanges(const CoincenterCommand& command,
+                                 PublicExchangePresenceBitset& publicExchangePresence) {
   if (command.exchangeNames().empty()) {
     // All public exchanges used
     const auto result = publicExchangePresence.none();
     publicExchangePresence.set();
     return result;
   }
-  for (const ExchangeName &exchangeName : command.exchangeNames()) {
+  for (const ExchangeName& exchangeName : command.exchangeNames()) {
     const auto exchangePos = exchangeName.publicExchangePos();
     if (publicExchangePresence[exchangePos]) {
       return false;
@@ -56,7 +56,7 @@ CoincenterCommandsIterator::CoincenterCommandSpan CoincenterCommandsIterator::ne
     UpdateBitsetAreNewExchanges(groupedCommands.front(), publicExchangePresence);
 
     while (_pos + groupedCommands.size() < _commands.size()) {
-      const CoincenterCommand &nextCommand = _commands[_pos + groupedCommands.size()];
+      const CoincenterCommand& nextCommand = _commands[_pos + groupedCommands.size()];
       if (nextCommand.type() != groupedCommands.front().type()) {
         break;
       }

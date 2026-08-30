@@ -13,8 +13,8 @@
 
 namespace cct {
 
-void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands &coincenterCommands,
-                            const CoincenterCmdLineOptions &generalOptions, settings::RunMode runMode) {
+void ProcessCommandsFromCLI(std::string_view programName, const CoincenterCommands& coincenterCommands,
+                            const CoincenterCmdLineOptions& generalOptions, settings::RunMode runMode) {
   // Should be outside the try / catch as it holds the RAII object managing the Logging (LoggingInfo)
   CoincenterInfo coincenterInfo = CoincenterInfo_Create(programName, generalOptions, runMode);
 
@@ -30,7 +30,7 @@ void ProcessCommandsFromCLI(std::string_view programName, const CoincenterComman
     }
 
     log::debug("normal termination after {} command(s) processed", nbCommandsProcessed);
-  } catch (const exception &e) {
+  } catch (const exception& e) {
     // Log exception here as LoggingInfo is still configured at this point (will be destroyed immediately afterwards)
     log::critical("{}", e.what());
   }

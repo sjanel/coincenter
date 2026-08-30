@@ -48,7 +48,7 @@ string CurrencyExchange::str() const {
   return ret;
 }
 
-std::ostream &operator<<(std::ostream &os, const CurrencyExchange &currencyExchange) {
+std::ostream& operator<<(std::ostream& os, const CurrencyExchange& currencyExchange) {
   return os << currencyExchange.str();
 }
 

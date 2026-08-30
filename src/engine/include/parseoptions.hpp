@@ -12,10 +12,10 @@
 namespace cct {
 
 template <class ParserType>
-auto ParseOptions(ParserType &parser, int argc, const char *argv[]) {
+auto ParseOptions(ParserType& parser, int argc, const char* argv[]) {
   auto programName = std::filesystem::path(argv[0]).filename().string();
 
-  std::span<const char *const> allArguments(argv, argc);
+  std::span<const char* const> allArguments(argv, argc);
 
   // skip first argument which is program name
   CommandLineOptionsParserIterator parserIt(parser, allArguments.last(allArguments.size() - 1U));
@@ -52,7 +52,7 @@ auto ParseOptions(ParserType &parser, int argc, const char *argv[]) {
   }
 
   // Apply global options to all parsed options containing commands
-  for (auto &groupParsedOptions : parsedOptions) {
+  for (auto& groupParsedOptions : parsedOptions) {
     groupParsedOptions.mergeGlobalWith(globalOptions);
   }
 

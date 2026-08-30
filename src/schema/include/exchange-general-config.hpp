@@ -10,7 +10,7 @@ namespace details {
 template <bool Optional>
 struct ExchangeGeneralConfig {
   template <class T>
-  void mergeWith(const T &other)
+  void mergeWith(const T& other)
     requires(std::is_same_v<T, ExchangeGeneralConfig<true>> && !Optional)
   {
     if (other.enabled) {

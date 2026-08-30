@@ -22,8 +22,8 @@ namespace cct {
 
 CoincenterCommands::CoincenterCommands(std::span<const CoincenterCmdLineOptions> cmdLineOptionsSpan) {
   _commands.reserve(static_cast<Commands::size_type>(cmdLineOptionsSpan.size()));
-  const CoincenterCommand *pPreviousCommand = nullptr;
-  for (const CoincenterCmdLineOptions &cmdLineOptions : cmdLineOptionsSpan) {
+  const CoincenterCommand* pPreviousCommand = nullptr;
+  for (const CoincenterCmdLineOptions& cmdLineOptions : cmdLineOptionsSpan) {
     addOption(cmdLineOptions, pPreviousCommand);
     if (!_commands.empty()) {
       pPreviousCommand = &_commands.back();
@@ -31,8 +31,8 @@ CoincenterCommands::CoincenterCommands(std::span<const CoincenterCmdLineOptions>
   }
 }
 
-void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOptions,
-                                   const CoincenterCommand *pPreviousCommand) {
+void CoincenterCommands::addOption(const CoincenterCmdLineOptions& cmdLineOptions,
+                                   const CoincenterCommand* pPreviousCommand) {
   // Warning: pPreviousCommand is a pointer into an object in _commands. Do not use after insertion of a new command
   // (pointer may be invalidated)
   if (cmdLineOptions.repeats.isPresent()) {
@@ -66,7 +66,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.orderbook.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.orderbook);
-    auto &cmd = _commands.emplace_back(CoincenterCommandType::Orderbook)
+    auto& cmd = _commands.emplace_back(CoincenterCommandType::Orderbook)
                     .setMarket(optionParser.parseMarket())
                     .setExchangeNames(optionParser.parseExchanges())
                     .setCur1(cmdLineOptions.orderbookCur);
@@ -202,7 +202,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
   if (!cmdLineOptions.lastTrades.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.lastTrades);
-    auto &cmd = _commands.emplace_back(CoincenterCommandType::LastTrades)
+    auto& cmd = _commands.emplace_back(CoincenterCommandType::LastTrades)
                     .setMarket(optionParser.parseMarket())
                     .setExchangeNames(optionParser.parseExchanges());
     if (cmdLineOptions.depth != CoincenterCmdLineOptions::kUndefinedDepth) {
@@ -230,7 +230,7 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions &cmdLineOption
 
     auto dur = optionParser.parseDuration(StringOptionParser::FieldIs::kOptional);
 
-    auto &cmd = _commands.emplace_back(CoincenterCommandType::Replay)
+    auto& cmd = _commands.emplace_back(CoincenterCommandType::Replay)
                     .setReplayOptions(cmdLineOptions.computeReplayOptions(dur))
                     .setExchangeNames(optionParser.parseExchanges());
 

@@ -38,7 +38,7 @@ namespace cct {
 
 using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
-Coincenter::Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo)
+Coincenter::Coincenter(const CoincenterInfo& coincenterInfo, const ExchangeSecretsInfo& exchangeSecretsInfo)
     : _coincenterInfo(coincenterInfo),
       _commonAPI(coincenterInfo),
       _fiatConverter(coincenterInfo, coincenterInfo.fiatConversionQueryRate()),
@@ -92,13 +92,13 @@ MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Mar
   TradesPerExchange lastTradesPerExchange(marketDataPerExchange.size());
 
   std::ranges::transform(marketDataPerExchange, marketOrderBookConversionRates.begin(),
-                         [](const auto &exchangeWithPairOrderBooksAndTrades) {
+                         [](const auto& exchangeWithPairOrderBooksAndTrades) {
                            return std::make_tuple(exchangeWithPairOrderBooksAndTrades.first->exchangeNameEnum(),
                                                   exchangeWithPairOrderBooksAndTrades.second.first, std::nullopt);
                          });
 
   std::ranges::transform(marketDataPerExchange, lastTradesPerExchange.begin(),
-                         [](const auto &exchangeWithPairOrderBooksAndTrades) {
+                         [](const auto& exchangeWithPairOrderBooksAndTrades) {
                            return std::make_pair(exchangeWithPairOrderBooksAndTrades.first,
                                                  exchangeWithPairOrderBooksAndTrades.second.second);
                          });
@@ -110,7 +110,7 @@ MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Mar
 }
 
 BalancePerExchange Coincenter::getBalance(std::span<const ExchangeName> privateExchangeNames,
-                                          const BalanceOptions &balanceOptions) {
+                                          const BalanceOptions& balanceOptions) {
   CurrencyCode equiCurrency = balanceOptions.equiCurrency();
   const auto equiCur = _coincenterInfo.tryConvertStableCoinToFiat(equiCurrency);
   if (equiCur.isDefined()) {
@@ -131,27 +131,27 @@ WalletPerExchange Coincenter::getDepositInfo(std::span<const ExchangeName> priva
 }
 
 ClosedOrdersPerExchange Coincenter::getClosedOrders(std::span<const ExchangeName> privateExchangeNames,
-                                                    const OrdersConstraints &closedOrdersConstraints) {
+                                                    const OrdersConstraints& closedOrdersConstraints) {
   return _exchangesOrchestrator.getClosedOrders(privateExchangeNames, closedOrdersConstraints);
 }
 
 OpenedOrdersPerExchange Coincenter::getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
-                                                    const OrdersConstraints &openedOrdersConstraints) {
+                                                    const OrdersConstraints& openedOrdersConstraints) {
   return _exchangesOrchestrator.getOpenedOrders(privateExchangeNames, openedOrdersConstraints);
 }
 
 NbCancelledOrdersPerExchange Coincenter::cancelOrders(std::span<const ExchangeName> privateExchangeNames,
-                                                      const OrdersConstraints &ordersConstraints) {
+                                                      const OrdersConstraints& ordersConstraints) {
   return _exchangesOrchestrator.cancelOrders(privateExchangeNames, ordersConstraints);
 }
 
 DepositsPerExchange Coincenter::getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
-                                                  const DepositsConstraints &depositsConstraints) {
+                                                  const DepositsConstraints& depositsConstraints) {
   return _exchangesOrchestrator.getRecentDeposits(privateExchangeNames, depositsConstraints);
 }
 
 WithdrawsPerExchange Coincenter::getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
-                                                    const WithdrawsConstraints &withdrawsConstraints) {
+                                                    const WithdrawsConstraints& withdrawsConstraints) {
   return _exchangesOrchestrator.getRecentWithdraws(privateExchangeNames, withdrawsConstraints);
 }
 
@@ -197,26 +197,26 @@ UniquePublicSelectedExchanges Coincenter::getExchangesTradingMarket(Market mk, E
 
 TradeResultPerExchange Coincenter::trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
                                          std::span<const ExchangeName> privateExchangeNames,
-                                         const TradeOptions &tradeOptions) {
+                                         const TradeOptions& tradeOptions) {
   return _exchangesOrchestrator.trade(startAmount, isPercentageTrade, toCurrency, privateExchangeNames, tradeOptions);
 }
 
 TradeResultPerExchange Coincenter::smartBuy(MonetaryAmount endAmount,
                                             std::span<const ExchangeName> privateExchangeNames,
-                                            const TradeOptions &tradeOptions) {
+                                            const TradeOptions& tradeOptions) {
   return _exchangesOrchestrator.smartBuy(endAmount, privateExchangeNames, tradeOptions);
 }
 
 TradeResultPerExchange Coincenter::smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
                                              std::span<const ExchangeName> privateExchangeNames,
-                                             const TradeOptions &tradeOptions) {
+                                             const TradeOptions& tradeOptions) {
   return _exchangesOrchestrator.smartSell(startAmount, isPercentageTrade, privateExchangeNames, tradeOptions);
 }
 
 DeliveredWithdrawInfoWithExchanges Coincenter::withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                                                        const ExchangeName &fromPrivateExchangeName,
-                                                        const ExchangeName &toPrivateExchangeName,
-                                                        const WithdrawOptions &withdrawOptions) {
+                                                        const ExchangeName& fromPrivateExchangeName,
+                                                        const ExchangeName& toPrivateExchangeName,
+                                                        const WithdrawOptions& withdrawOptions) {
   return _exchangesOrchestrator.withdraw(grossAmount, isPercentageWithdraw, fromPrivateExchangeName,
                                          toPrivateExchangeName, withdrawOptions);
 }
@@ -243,15 +243,15 @@ MonetaryAmountPerExchange Coincenter::getLastPricePerExchange(Market mk, Exchang
   return _exchangesOrchestrator.getLastPricePerExchange(mk, exchangeNames);
 }
 
-MarketTimestampSetsPerExchange Coincenter::getMarketsAvailableForReplay(const ReplayOptions &replayOptions,
+MarketTimestampSetsPerExchange Coincenter::getMarketsAvailableForReplay(const ReplayOptions& replayOptions,
                                                                         ExchangeNameSpan exchangeNames) {
   return _exchangesOrchestrator.pullAvailableMarketsForReplay(replayOptions.timeWindow(), exchangeNames);
 }
 
 namespace {
-auto CreateExchangeNameVector(Market market, const MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange) {
+auto CreateExchangeNameVector(Market market, const MarketTimestampSetsPerExchange& marketTimestampSetsPerExchange) {
   ExchangeNameEnumVector exchangesWithThisMarketData;
-  for (const auto &[exchange, marketTimestampSets] : marketTimestampSetsPerExchange) {
+  for (const auto& [exchange, marketTimestampSets] : marketTimestampSetsPerExchange) {
     if (ContainsMarket(market, marketTimestampSets)) {
       exchangesWithThisMarketData.emplace_back(exchange->exchangeNameEnum());
     }
@@ -259,19 +259,19 @@ auto CreateExchangeNameVector(Market market, const MarketTimestampSetsPerExchang
   return exchangesWithThisMarketData;
 }
 
-void CreateAndRegisterTraderAlgorithms(const AbstractMarketTraderFactory &marketTraderFactory,
+void CreateAndRegisterTraderAlgorithms(const AbstractMarketTraderFactory& marketTraderFactory,
                                        std::string_view algorithmName,
                                        std::span<MarketTraderEngine> marketTraderEngines) {
-  for (auto &marketTraderEngine : marketTraderEngines) {
-    const auto &marketTraderEngineState = marketTraderEngine.marketTraderEngineState();
+  for (auto& marketTraderEngine : marketTraderEngines) {
+    const auto& marketTraderEngineState = marketTraderEngine.marketTraderEngineState();
 
     marketTraderEngine.registerMarketTrader(marketTraderFactory.construct(algorithmName, marketTraderEngineState));
   }
 }
 
-bool Filter(Market market, MarketTimestampSet &marketTimestampSet) {
+bool Filter(Market market, MarketTimestampSet& marketTimestampSet) {
   auto it = std::ranges::partition_point(
-      marketTimestampSet, [market](const auto &marketTimestamp) { return marketTimestamp.market < market; });
+      marketTimestampSet, [market](const auto& marketTimestamp) { return marketTimestamp.market < market; });
   if (it != marketTimestampSet.end() && it->market == market) {
     marketTimestampSet = MarketTimestampSet{*it};
     return false;
@@ -281,7 +281,7 @@ bool Filter(Market market, MarketTimestampSet &marketTimestampSet) {
   return true;
 }
 
-void Filter(Market market, MarketTimestampSetsPerExchange &marketTimestampSetsPerExchange) {
+void Filter(Market market, MarketTimestampSetsPerExchange& marketTimestampSetsPerExchange) {
   for (auto it = marketTimestampSetsPerExchange.begin(); it != marketTimestampSetsPerExchange.end();) {
     const bool orderBooksEmpty = Filter(market, it->second.orderBooksMarkets);
     const bool tradesEmpty = Filter(market, it->second.tradesMarkets);
@@ -297,8 +297,8 @@ void Filter(Market market, MarketTimestampSetsPerExchange &marketTimestampSetsPe
 
 }  // namespace
 
-ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTraderFactory,
-                                 const ReplayOptions &replayOptions, Market market, ExchangeNameSpan exchangeNames) {
+ReplayResults Coincenter::replay(const AbstractMarketTraderFactory& marketTraderFactory,
+                                 const ReplayOptions& replayOptions, Market market, ExchangeNameSpan exchangeNames) {
   const TimeWindow timeWindow = replayOptions.timeWindow();
   auto marketTimestampSetsPerExchange = _exchangesOrchestrator.pullAvailableMarketsForReplay(timeWindow, exchangeNames);
 
@@ -340,9 +340,9 @@ ReplayResults Coincenter::replay(const AbstractMarketTraderFactory &marketTrader
 }
 
 MarketTradingGlobalResultPerExchange Coincenter::replayAlgorithm(
-    const AbstractMarketTraderFactory &marketTraderFactory, std::string_view algorithmName,
-    const ReplayOptions &replayOptions, std::span<MarketTraderEngine> marketTraderEngines,
-    const ExchangeNameEnumVector &exchangesWithThisMarketData) {
+    const AbstractMarketTraderFactory& marketTraderFactory, std::string_view algorithmName,
+    const ReplayOptions& replayOptions, std::span<MarketTraderEngine> marketTraderEngines,
+    const ExchangeNameEnumVector& exchangesWithThisMarketData) {
   CreateAndRegisterTraderAlgorithms(marketTraderFactory, algorithmName, marketTraderEngines);
 
   MarketTradeRangeStatsPerExchange tradeRangeStatsPerExchange =
@@ -366,8 +366,8 @@ MonetaryAmount ComputeStartAmount(CurrencyCode currencyCode, MonetaryAmount conv
 }  // namespace
 
 Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
-    const ReplayOptions &replayOptions, Market market, ExchangeNameEnumVector &exchangesWithThisMarketData) {
-  const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
+    const ReplayOptions& replayOptions, Market market, ExchangeNameEnumVector& exchangesWithThisMarketData) {
+  const auto& automationConfig = _coincenterInfo.generalConfig().trading.automation;
   const auto startBaseAmountEquivalent = automationConfig.startingContext.startBaseAmountEquivalent;
   const auto startQuoteAmountEquivalent = automationConfig.startingContext.startQuoteAmountEquivalent;
   const bool isValidateOnly = replayOptions.replayMode() == ReplayOptions::ReplayMode::kValidateOnly;
@@ -399,17 +399,17 @@ Coincenter::MarketTraderEngineVector Coincenter::createMarketTraderEngines(
       continue;
     }
 
-    const auto &exchangeConfig = _coincenterInfo.exchangeConfig(exchangesWithThisMarketData[exchangePos]);
+    const auto& exchangeConfig = _coincenterInfo.exchangeConfig(exchangesWithThisMarketData[exchangePos]);
 
     marketTraderEngines.emplace_back(exchangeConfig, market, startBaseAmount, startQuoteAmount);
   }
   return marketTraderEngines;
 }
 
-MarketTradeRangeStatsPerExchange Coincenter::tradingProcess(const ReplayOptions &replayOptions,
+MarketTradeRangeStatsPerExchange Coincenter::tradingProcess(const ReplayOptions& replayOptions,
                                                             std::span<MarketTraderEngine> marketTraderEngines,
                                                             ExchangeNameEnumSpan exchangesWithThisMarketData) {
-  const auto &automationConfig = _coincenterInfo.generalConfig().trading.automation;
+  const auto& automationConfig = _coincenterInfo.generalConfig().trading.automation;
   const auto loadChunkDuration = automationConfig.deserialization.loadChunkDuration.duration;
   const auto timeWindow = replayOptions.timeWindow();
 
@@ -426,7 +426,7 @@ MarketTradeRangeStatsPerExchange Coincenter::tradingProcess(const ReplayOptions 
       tradeRangeResultsPerExchange = std::move(subRangeResultsPerExchange);
     } else {
       int pos{};  // TODO: we can use std::views::enumerate from C++23 when available
-      for (auto &[exchange, result] : subRangeResultsPerExchange) {
+      for (auto& [exchange, result] : subRangeResultsPerExchange) {
         tradeRangeResultsPerExchange[pos].second += result;
         ++pos;
       }
@@ -442,7 +442,7 @@ void Coincenter::updateFileCaches() const {
   _commonAPI.updateCacheFile();
   _fiatConverter.updateCacheFile();
 
-  std::ranges::for_each(_exchangePool.exchanges(), [](const Exchange &exchange) { exchange.updateCacheFile(); });
+  std::ranges::for_each(_exchangePool.exchanges(), [](const Exchange& exchange) { exchange.updateCacheFile(); });
 }
 
 }  // namespace cct

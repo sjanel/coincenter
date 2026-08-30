@@ -91,8 +91,8 @@ struct MainOptions {
 
 class CommandLineOptionsParserTest : public ::testing::Test {
  public:
-  Opts createOptions(std::initializer_list<const char *> init) {
-    vector<const char *> opts(init.begin(), init.end());
+  Opts createOptions(std::initializer_list<const char*> init) {
+    vector<const char*> opts(init.begin(), init.end());
     return _parser.parse(opts);
   }
 
@@ -254,8 +254,8 @@ class CommandLineOptionsParserExtTest : public ::testing::Test {
  public:
   CommandLineOptionsParserExtTest() { _parser.append(kAdditionalOpts); }
 
-  OptsExt createOptions(std::initializer_list<const char *> init) {
-    vector<const char *> opts(init.begin(), init.end());
+  OptsExt createOptions(std::initializer_list<const char*> init) {
+    vector<const char*> opts(init.begin(), init.end());
     return _parser.parse(opts);
   }
 

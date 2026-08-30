@@ -9,7 +9,7 @@ class MarketDataView;
 
 class BasicStats {
  public:
-  explicit BasicStats(const MarketDataView &marketDataView) : _marketDataView(marketDataView) {}
+  explicit BasicStats(const MarketDataView& marketDataView) : _marketDataView(marketDataView) {}
 
   MonetaryAmount movingAverageFromLastPublicTradesPrice(TimePoint oldestTime) const;
 
@@ -20,7 +20,7 @@ class BasicStats {
                                                        Duration minFrequencyBetweenTwoPoints = Duration{}) const;
 
  private:
-  const MarketDataView &_marketDataView;
+  const MarketDataView& _marketDataView;
 };
 
 }  // namespace cct

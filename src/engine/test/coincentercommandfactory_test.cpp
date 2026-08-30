@@ -20,14 +20,14 @@ namespace cct {
 
 class CoincenterCommandFactoryTest : public ::testing::Test {
  protected:
-  StringOptionParser &inputStr(std::string_view str) {
+  StringOptionParser& inputStr(std::string_view str) {
     optionParser = StringOptionParser(str);
     return optionParser;
   }
 
   StringOptionParser optionParser;
   CoincenterCmdLineOptions cmdLineOptions;
-  const CoincenterCommand *pPreviousCommand{};
+  const CoincenterCommand* pPreviousCommand{};
   CoincenterCommandFactory commandFactory{cmdLineOptions, pPreviousCommand};
 };
 
@@ -224,7 +224,7 @@ TEST_F(CoincenterCommandFactoryTest, CreateWithdrawAllValid) {
 
 class CoincenterCommandFactoryWithPreviousTest : public ::testing::Test {
  protected:
-  StringOptionParser &inputStr(std::string_view str) {
+  StringOptionParser& inputStr(std::string_view str) {
     optionParser = StringOptionParser(str);
     return optionParser;
   }

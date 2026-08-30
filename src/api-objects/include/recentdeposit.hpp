@@ -34,22 +34,22 @@ class ClosestRecentDepositPicker {
 
   ClosestRecentDepositPicker() noexcept = default;
 
-  void push_back(const RecentDeposit &recentDeposit);
+  void push_back(const RecentDeposit& recentDeposit);
 
-  void push_back(RecentDeposit &&recentDeposit);
+  void push_back(RecentDeposit&& recentDeposit);
 
   void reserve(size_type sz) { _recentDeposits.reserve(sz); }
 
   /// Given deposit information in parameters, return a position (0 indexed) corresponding to the closest
   /// deposit that was pushed back. Otherwise, if no matching deposit is found (added previously thanks to 'push_back'
   /// method), -1 is returned
-  int pickClosestRecentDepositPos(const RecentDeposit &expectedDeposit);
+  int pickClosestRecentDepositPos(const RecentDeposit& expectedDeposit);
 
  private:
   /// Select the RecentDeposit among given ones which is the closest to 'this' object.
   /// It may reorder the given vector but will not modify objects themselves.
   /// Returns nullptr if no matching deposit has been found
-  const RecentDeposit *selectClosestRecentDeposit(const RecentDeposit &expectedDeposit);
+  const RecentDeposit* selectClosestRecentDeposit(const RecentDeposit& expectedDeposit);
 
   RecentDepositVector _recentDeposits;
 };
@@ -59,7 +59,7 @@ class ClosestRecentDepositPicker {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::api::RecentDeposit> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -69,7 +69,7 @@ struct fmt::formatter<cct::api::RecentDeposit> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::api::RecentDeposit &v, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::api::RecentDeposit& v, FormatContext& ctx) const -> decltype(ctx.out()) {
     return fmt::format_to(ctx.out(), "{} at {}", v.amount(), cct::TimeToString(v.timePoint()));
   }
 };

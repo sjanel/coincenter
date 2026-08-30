@@ -33,7 +33,7 @@ class Coincenter {
  public:
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
-  Coincenter(const CoincenterInfo &coincenterInfo, const ExchangeSecretsInfo &exchangeSecretsInfo);
+  Coincenter(const CoincenterInfo& coincenterInfo, const ExchangeSecretsInfo& exchangeSecretsInfo);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 
@@ -75,30 +75,30 @@ class Coincenter {
 
   /// Query the private balance
   BalancePerExchange getBalance(std::span<const ExchangeName> privateExchangeNames,
-                                const BalanceOptions &balanceOptions);
+                                const BalanceOptions& balanceOptions);
 
   /// Get deposit information for given accounts
   WalletPerExchange getDepositInfo(std::span<const ExchangeName> privateExchangeNames, CurrencyCode depositCurrency);
 
   /// Get closed orders on given list of exchanges following given order constraints
   ClosedOrdersPerExchange getClosedOrders(std::span<const ExchangeName> privateExchangeNames,
-                                          const OrdersConstraints &closedOrdersConstraints);
+                                          const OrdersConstraints& closedOrdersConstraints);
 
   /// Get opened orders on given list of exchanges following given order constraints
   OpenedOrdersPerExchange getOpenedOrders(std::span<const ExchangeName> privateExchangeNames,
-                                          const OrdersConstraints &openedOrdersConstraints);
+                                          const OrdersConstraints& openedOrdersConstraints);
 
   /// Cancel orders on given list of exchanges following given constraints
   NbCancelledOrdersPerExchange cancelOrders(std::span<const ExchangeName> privateExchangeNames,
-                                            const OrdersConstraints &ordersConstraints);
+                                            const OrdersConstraints& ordersConstraints);
 
   /// Get recent deposits on given list of exchanges following given constraints
   DepositsPerExchange getRecentDeposits(std::span<const ExchangeName> privateExchangeNames,
-                                        const DepositsConstraints &depositsConstraints);
+                                        const DepositsConstraints& depositsConstraints);
 
   /// Get recent withdraws on given list of exchanges following given constraints
   WithdrawsPerExchange getRecentWithdraws(std::span<const ExchangeName> privateExchangeNames,
-                                          const WithdrawsConstraints &withdrawsConstraints);
+                                          const WithdrawsConstraints& withdrawsConstraints);
 
   /// Attemps to sell all small amount of 'currencyCode' (dust) for given list of accounts.
   /// Dust threshold should be set first in the config file for the corresponding currency
@@ -124,63 +124,63 @@ class Coincenter {
   /// If exactly one private exchange is given, balance will not be queried and trade will be launched without balance
   /// check.
   TradeResultPerExchange trade(MonetaryAmount startAmount, bool isPercentageTrade, CurrencyCode toCurrency,
-                               std::span<const ExchangeName> privateExchangeNames, const TradeOptions &tradeOptions);
+                               std::span<const ExchangeName> privateExchangeNames, const TradeOptions& tradeOptions);
 
   TradeResultPerExchange smartBuy(MonetaryAmount endAmount, std::span<const ExchangeName> privateExchangeNames,
-                                  const TradeOptions &tradeOptions);
+                                  const TradeOptions& tradeOptions);
 
   TradeResultPerExchange smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
                                    std::span<const ExchangeName> privateExchangeNames,
-                                   const TradeOptions &tradeOptions);
+                                   const TradeOptions& tradeOptions);
 
   /// Single withdraw of 'grossAmount' from 'fromExchangeName' to 'toExchangeName'
   DeliveredWithdrawInfoWithExchanges withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                                              const ExchangeName &fromPrivateExchangeName,
-                                              const ExchangeName &toPrivateExchangeName,
-                                              const WithdrawOptions &withdrawOptions);
+                                              const ExchangeName& fromPrivateExchangeName,
+                                              const ExchangeName& toPrivateExchangeName,
+                                              const WithdrawOptions& withdrawOptions);
 
   /// Retrieves the markets available for replay for exchanges selection that has some data during the last
   /// 'replayDuration' time (so within the time frame [now - replayDuration, now])
-  MarketTimestampSetsPerExchange getMarketsAvailableForReplay(const ReplayOptions &replayOptions,
+  MarketTimestampSetsPerExchange getMarketsAvailableForReplay(const ReplayOptions& replayOptions,
                                                               ExchangeNameSpan exchangeNames);
 
   /// Replay all markets for exchanges selection that has some data during the last
   /// 'replayDuration' time (so within the time frame [now - replayDuration, now])
-  ReplayResults replay(const AbstractMarketTraderFactory &marketTraderFactory, const ReplayOptions &replayOptions,
+  ReplayResults replay(const AbstractMarketTraderFactory& marketTraderFactory, const ReplayOptions& replayOptions,
                        Market market, ExchangeNameSpan exchangeNames);
 
   /// Dumps the content of all file caches in data directory to save cURL queries.
   void updateFileCaches() const;
 
-  ExchangePool &exchangePool() { return _exchangePool; }
-  const ExchangePool &exchangePool() const { return _exchangePool; }
+  ExchangePool& exchangePool() { return _exchangePool; }
+  const ExchangePool& exchangePool() const { return _exchangePool; }
 
-  const CoincenterInfo &coincenterInfo() const { return _coincenterInfo; }
+  const CoincenterInfo& coincenterInfo() const { return _coincenterInfo; }
 
-  api::CommonAPI &commonAPI() { return _commonAPI; }
-  const api::CommonAPI &commonAPI() const { return _commonAPI; }
+  api::CommonAPI& commonAPI() { return _commonAPI; }
+  const api::CommonAPI& commonAPI() const { return _commonAPI; }
 
-  FiatConverter &fiatConverter() { return _fiatConverter; }
-  const FiatConverter &fiatConverter() const { return _fiatConverter; }
+  FiatConverter& fiatConverter() { return _fiatConverter; }
+  const FiatConverter& fiatConverter() const { return _fiatConverter; }
 
  private:
   using MarketTraderEngineVector = FixedCapacityVector<MarketTraderEngine, kNbSupportedExchanges>;
 
-  MarketTradingGlobalResultPerExchange replayAlgorithm(const AbstractMarketTraderFactory &marketTraderFactory,
+  MarketTradingGlobalResultPerExchange replayAlgorithm(const AbstractMarketTraderFactory& marketTraderFactory,
                                                        std::string_view algorithmName,
-                                                       const ReplayOptions &replayOptions,
+                                                       const ReplayOptions& replayOptions,
                                                        std::span<MarketTraderEngine> marketTraderEngines,
-                                                       const ExchangeNameEnumVector &exchangesWithThisMarketData);
+                                                       const ExchangeNameEnumVector& exchangesWithThisMarketData);
 
   // TODO: may be moved somewhere else?
-  MarketTraderEngineVector createMarketTraderEngines(const ReplayOptions &replayOptions, Market market,
-                                                     ExchangeNameEnumVector &exchangesWithThisMarketData);
+  MarketTraderEngineVector createMarketTraderEngines(const ReplayOptions& replayOptions, Market market,
+                                                     ExchangeNameEnumVector& exchangesWithThisMarketData);
 
-  MarketTradeRangeStatsPerExchange tradingProcess(const ReplayOptions &replayOptions,
+  MarketTradeRangeStatsPerExchange tradingProcess(const ReplayOptions& replayOptions,
                                                   std::span<MarketTraderEngine> marketTraderEngines,
                                                   ExchangeNameEnumSpan exchangesWithThisMarketData);
 
-  const CoincenterInfo &_coincenterInfo;
+  const CoincenterInfo& _coincenterInfo;
   api::CommonAPI _commonAPI;
   FiatConverter _fiatConverter;
   api::APIKeysProvider _apiKeyProvider;

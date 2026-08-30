@@ -1,7 +1,6 @@
 #include "upbitprivateapi.hpp"
 
 #include <aeronet/jwt.hpp>
-
 #include <algorithm>
 #include <cstdint>
 #include <optional>
@@ -22,9 +21,6 @@
 #include "closed-order.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -37,6 +33,9 @@
 #include "exchangeprivateapitypes.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"

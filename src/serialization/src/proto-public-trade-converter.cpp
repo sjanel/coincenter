@@ -34,7 +34,7 @@ TradeSide ConvertTradeSide(::proto::TradeSide tradeSide) {
 
 }  // namespace
 
-::proto::PublicTrade ConvertPublicTradeToProto(const PublicTrade &publicTrade) {
+::proto::PublicTrade ConvertPublicTradeToProto(const PublicTrade& publicTrade) {
   ::proto::PublicTrade protoObj;
 
   protoObj.set_unixtimestampinms(TimestampToMillisecondsSinceEpoch(publicTrade.time()));
@@ -52,7 +52,7 @@ TradeSide ConvertTradeSide(::proto::TradeSide tradeSide) {
   return protoObj;
 }
 
-PublicTrade PublicTradeConverter::operator()(const ::proto::PublicTrade &protoPublicTrade) const {
+PublicTrade PublicTradeConverter::operator()(const ::proto::PublicTrade& protoPublicTrade) const {
   const MonetaryAmount amount(protoPublicTrade.volumeamount(), _market.base(), protoPublicTrade.volumenbdecimals());
   const MonetaryAmount price(protoPublicTrade.priceamount(), _market.quote(), protoPublicTrade.pricenbdecimals());
   const TimePoint timeStamp(milliseconds(protoPublicTrade.unixtimestampinms()));

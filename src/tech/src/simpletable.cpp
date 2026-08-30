@@ -35,19 +35,17 @@ class Align {
  private:
   std::ios::fmtflags fmt;
 
-  friend std::ostream &operator<<(std::ostream &os, const Align &arg) {
+  friend std::ostream& operator<<(std::ostream& os, const Align& arg) {
     os.setf(arg.fmt);
     return os;
   }
 };
 
-template <class>
-constexpr bool always_false_v = false;
 }  // namespace
 
 CellLine::size_type CellLine::width() const {
   return std::visit(
-      [](auto &&val) {
+      [](auto&& val) {
         using T = std::decay_t<decltype(val)>;
 
         if constexpr (std::is_same_v<T, string_type> || std::is_same_v<T, std::string_view>) {
@@ -57,16 +55,15 @@ CellLine::size_type CellLine::width() const {
         } else if constexpr (std::is_integral_v<T>) {
           return static_cast<size_type>(nchars(val));
         } else {
-          // Note: can be replaced with 'static_assert(false);' in C++23
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+          static_assert(false);
         }
       },
       _data);
 }
 
-std::ostream &operator<<(std::ostream &os, const CellLine &singleLineCell) {
+std::ostream& operator<<(std::ostream& os, const CellLine& singleLineCell) {
   std::visit(
-      [&os](auto &&val) {
+      [&os](auto&& val) {
         using T = std::decay_t<decltype(val)>;
 
         if constexpr (std::is_same_v<T, bool>) {
@@ -76,7 +73,7 @@ std::ostream &operator<<(std::ostream &os, const CellLine &singleLineCell) {
           os << val;
         } else {
           // Note: can be replaced with 'static_assert(false);' in C++23
-          static_assert(always_false_v<T>, "non-exhaustive visitor!");
+          static_assert(false);
         }
       },
       singleLineCell._data);
@@ -85,16 +82,16 @@ std::ostream &operator<<(std::ostream &os, const CellLine &singleLineCell) {
 
 Cell::size_type Cell::width() const {
   const auto maxWidthLineIt = std::ranges::max_element(
-      _singleLineCells, [](const auto &lhs, const auto &rhs) { return lhs.width() < rhs.width(); });
+      _singleLineCells, [](const auto& lhs, const auto& rhs) { return lhs.width() < rhs.width(); });
   return maxWidthLineIt == _singleLineCells.end() ? size_type{} : maxWidthLineIt->width();
 }
 
 namespace {
-bool IsMultiLine(const Row &row) {
-  return std::ranges::any_of(row, [](const auto &cell) { return cell.size() > 1U; });
+bool IsMultiLine(const Row& row) {
+  return std::ranges::any_of(row, [](const auto& cell) { return cell.size() > 1U; });
 }
 
-void PrintCell(std::ostream &os, const Cell &cell, Cell::size_type linePos, Cell::size_type maxCellWidth) {
+void PrintCell(std::ostream& os, const Cell& cell, Cell::size_type linePos, Cell::size_type maxCellWidth) {
   os << ' ' << Align(AlignTo::kLeft) << std::setw(maxCellWidth);
 
   if (linePos < cell.size()) {
@@ -107,9 +104,9 @@ void PrintCell(std::ostream &os, const Cell &cell, Cell::size_type linePos, Cell
   os << ' ' << kColumnSep;
 }
 
-void PrintRow(std::ostream &os, const Row &row, std::span<const uint16_t> maxWidthPerColumn) {
+void PrintRow(std::ostream& os, const Row& row, std::span<const uint16_t> maxWidthPerColumn) {
   const auto maxSingleLineCellsIt =
-      std::ranges::max_element(row, [](const auto &lhs, const auto &rhs) { return lhs.size() < rhs.size(); });
+      std::ranges::max_element(row, [](const auto& lhs, const auto& rhs) { return lhs.size() < rhs.size(); });
   const auto maxNbSingleLineCells = maxSingleLineCellsIt == row.end() ? 0 : maxSingleLineCellsIt->size();
   using size_type = std::remove_const_t<decltype(maxNbSingleLineCells)>;
   for (size_type linePos = 0; linePos < maxNbSingleLineCells; ++linePos) {
@@ -117,7 +114,7 @@ void PrintRow(std::ostream &os, const Row &row, std::span<const uint16_t> maxWid
 
     size_type columnPos{};
 
-    for (const auto &cell : row) {
+    for (const auto& cell : row) {
       PrintCell(os, cell, linePos, maxWidthPerColumn[columnPos]);
       ++columnPos;
     }
@@ -130,10 +127,10 @@ void PrintRow(std::ostream &os, const Row &row, std::span<const uint16_t> maxWid
 }  // namespace table
 
 namespace {
-auto ComputeMaxWidthPerColumn(const SimpleTable &table) {
+auto ComputeMaxWidthPerColumn(const SimpleTable& table) {
   const auto nbColumns = table.front().size();
   SmallVector<uint16_t, 16> res(nbColumns, 0);
-  for (const auto &row : table) {
+  for (const auto& row : table) {
     if (row.empty()) {
       continue;
     }
@@ -167,7 +164,7 @@ auto ComputeLineSep(std::span<const uint16_t> maxWidthPerColumnVector, char cell
 }
 }  // namespace
 
-std::ostream &operator<<(std::ostream &os, const SimpleTable &table) {
+std::ostream& operator<<(std::ostream& os, const SimpleTable& table) {
   if (table.empty()) {
     return os;
   }
@@ -180,7 +177,7 @@ std::ostream &operator<<(std::ostream &os, const SimpleTable &table) {
 
   bool isLastLineSep = false;
   for (SimpleTable::size_type rowPos{}, nbRows = table.size(); rowPos < nbRows; ++rowPos) {
-    const auto &row = table[rowPos];
+    const auto& row = table[rowPos];
 
     if (row.empty()) {
       os << lineSep << '\n';

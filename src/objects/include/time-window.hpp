@@ -55,15 +55,15 @@ class TimeWindow {
 
   TimeWindow operator+(Duration dur) const { return TimeWindow(_from + dur, _to + dur); }
 
-  TimeWindow &operator+=(Duration dur) { return *this = *this + dur; }
+  TimeWindow& operator+=(Duration dur) { return *this = *this + dur; }
 
   string str() const;
 
-  char *appendTo(char *buf) const;
+  char* appendTo(char* buf) const;
 
   static constexpr size_t strLen() { return kTimeWindowLen; }
 
-  bool operator==(const TimeWindow &) const noexcept = default;
+  bool operator==(const TimeWindow&) const noexcept = default;
 
  private:
   static constexpr std::string_view kArrow = " -> ";
@@ -87,7 +87,7 @@ class TimeWindow {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::TimeWindow> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -97,7 +97,7 @@ struct fmt::formatter<cct::TimeWindow> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::TimeWindow &timeWindow, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::TimeWindow& timeWindow, FormatContext& ctx) const -> decltype(ctx.out()) {
     return fmt::format_to(ctx.out(), "{}", timeWindow.str());
   }
 };
@@ -107,7 +107,7 @@ namespace glz {
 template <>
 struct from<JSON, ::cct::TimeWindow> {
   template <auto Opts, class It, class End>
-  static void op(auto &&value, is_context auto &&, It &&it, End &&end) noexcept {
+  static void op(auto&& value, is_context auto&&, It&& it, End&& end) noexcept {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
     value = ::cct::TimeWindow(std::string_view(it, endIt));
@@ -118,7 +118,7 @@ struct from<JSON, ::cct::TimeWindow> {
 template <>
 struct to<JSON, ::cct::TimeWindow> {
   template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+  static void op(auto&& value, Ctx&&, B&& b, IX&& ix) {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };

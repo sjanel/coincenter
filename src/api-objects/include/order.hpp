@@ -15,8 +15,8 @@ class Order {
  public:
   TimePoint placedTime() const { return _placedTime; }
 
-  OrderId &id() { return _id; }
-  const OrderId &id() const { return _id; }
+  OrderId& id() { return _id; }
+  const OrderId& id() const { return _id; }
 
   MonetaryAmount matchedVolume() const { return _matchedVolume; }
   MonetaryAmount price() const { return _price; }
@@ -25,7 +25,7 @@ class Order {
 
   Market market() const { return Market(_matchedVolume.currencyCode(), _price.currencyCode()); }
 
-  std::strong_ordering operator<=>(const Order &) const noexcept = default;
+  std::strong_ordering operator<=>(const Order&) const noexcept = default;
 
   using trivially_relocatable = is_trivially_relocatable<OrderId>::type;
 

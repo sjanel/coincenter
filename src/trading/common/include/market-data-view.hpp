@@ -13,7 +13,7 @@ namespace cct {
 class MarketDataView {
  public:
   /// Get a reference to last (current for this turn) market order book
-  const MarketOrderBook &currentMarketOrderBook() const { return _pOrderBooks[_currentOrderBookEndPos - 1U]; }
+  const MarketOrderBook& currentMarketOrderBook() const { return _pOrderBooks[_currentOrderBookEndPos - 1U]; }
 
   /// Get a span of all historical market order books since the start of the market trader engine (including current /
   /// last one)
@@ -29,17 +29,17 @@ class MarketDataView {
  private:
   friend class MarketTraderEngine;
 
-  MarketDataView(const MarketOrderBook *pOrderBooks, const PublicTrade *pPublicTradesBeg,
-                 const PublicTrade *pPublicTradesEnd) noexcept;
+  MarketDataView(const MarketOrderBook* pOrderBooks, const PublicTrade* pPublicTradesBeg,
+                 const PublicTrade* pPublicTradesEnd) noexcept;
 
   void advanceUntil(TimePoint marketOrderBookTs);
 
-  const MarketOrderBook *_pOrderBooks;
-  const PublicTrade *_pPublicTradesBeg;
-  const PublicTrade *_pPublicTradesEnd;
+  const MarketOrderBook* _pOrderBooks;
+  const PublicTrade* _pPublicTradesBeg;
+  const PublicTrade* _pPublicTradesEnd;
 
-  const PublicTrade *_pCurrentTradesBeg;
-  const PublicTrade *_pCurrentTradesEnd;
+  const PublicTrade* _pCurrentTradesBeg;
+  const PublicTrade* _pCurrentTradesEnd;
   std::size_t _currentOrderBookEndPos{};
 };
 

@@ -28,7 +28,7 @@ class BalanceOptions {
   CurrencyCode equiCurrency() const { return _equiCurrency; }
   AmountIncludePolicy amountIncludePolicy() const { return _amountIncludePolicy; }
 
-  constexpr bool operator==(const BalanceOptions &) const noexcept = default;
+  constexpr bool operator==(const BalanceOptions&) const noexcept = default;
 
  private:
   CurrencyCode _equiCurrency;

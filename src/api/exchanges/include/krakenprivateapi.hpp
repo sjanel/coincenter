@@ -2,9 +2,9 @@
 
 #include "cachedresult.hpp"
 #include "cct_string.hpp"
-#include "httpclient.hpp"
 #include "exchangeprivateapi.hpp"
 #include "exchangeprivateapitypes.hpp"
+#include "httpclient.hpp"
 #include "kraken-schema.hpp"
 #include "tradeinfo.hpp"
 

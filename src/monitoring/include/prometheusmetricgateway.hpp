@@ -19,20 +19,20 @@ class PrometheusMetricGateway : public AbstractMetricGateway {
   using Gateway = prometheus::Gateway;
   using Registry = prometheus::Registry;
 
-  explicit PrometheusMetricGateway(const MonitoringInfo &monitoringInfo);
+  explicit PrometheusMetricGateway(const MonitoringInfo& monitoringInfo);
 
-  PrometheusMetricGateway(const PrometheusMetricGateway &) = delete;
-  PrometheusMetricGateway(PrometheusMetricGateway &&) = delete;
-  PrometheusMetricGateway &operator=(const PrometheusMetricGateway &) = delete;
-  PrometheusMetricGateway &operator=(PrometheusMetricGateway &&) = delete;
+  PrometheusMetricGateway(const PrometheusMetricGateway&) = delete;
+  PrometheusMetricGateway(PrometheusMetricGateway&&) = delete;
+  PrometheusMetricGateway& operator=(const PrometheusMetricGateway&) = delete;
+  PrometheusMetricGateway& operator=(PrometheusMetricGateway&&) = delete;
 
   ~PrometheusMetricGateway() override;
 
-  void add(MetricType metricType, MetricOperation op, const MetricKey &key, double val = 0) override;
+  void add(MetricType metricType, MetricOperation op, const MetricKey& key, double val = 0) override;
 
-  void createHistogram(const MetricKey &key, BucketBoundaries buckets) override;
+  void createHistogram(const MetricKey& key, BucketBoundaries buckets) override;
 
-  void createSummary(const MetricKey &key, const MetricSummaryInfo &metricSummaryInfo) override;
+  void createSummary(const MetricKey& key, const MetricSummaryInfo& metricSummaryInfo) override;
 
  private:
   void flush();
@@ -40,7 +40,7 @@ class PrometheusMetricGateway : public AbstractMetricGateway {
 
   Gateway _gateway;
   std::shared_ptr<Registry> _registry;
-  std::unordered_map<MetricKey, void *> _familiesMap;
+  std::unordered_map<MetricKey, void*> _familiesMap;
   std::mutex _familiesMapMutex;
   TimePoint _lastFlushedTime;
   int _checkFlushCounter{};  // To decrease number of times flush check is done

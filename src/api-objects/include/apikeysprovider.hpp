@@ -21,7 +21,7 @@ class APIKeysProvider {
   APIKeysProvider(std::string_view dataDir, settings::RunMode runMode)
       : APIKeysProvider(dataDir, ExchangeSecretsInfo(), runMode) {}
 
-  APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo, settings::RunMode runMode);
+  APIKeysProvider(std::string_view dataDir, const ExchangeSecretsInfo& exchangeSecretsInfo, settings::RunMode runMode);
 
   KeyNames getKeyNames(ExchangeNameEnum exchangeNameEnum) const;
 
@@ -29,7 +29,7 @@ class APIKeysProvider {
     return !_apiKeysPerExchange[static_cast<int>(exchangeNameEnum)].empty();
   }
 
-  const APIKey &get(const ExchangeName &exchangeName) const;
+  const APIKey& get(const ExchangeName& exchangeName) const;
 
   string str() const;
 
@@ -37,7 +37,7 @@ class APIKeysProvider {
   using APIKeys = vector<APIKey>;
   using APIKeysPerExchange = std::array<APIKeys, kNbSupportedExchanges>;
 
-  static APIKeysPerExchange ParseAPIKeys(std::string_view dataDir, const ExchangeSecretsInfo &exchangeSecretsInfo,
+  static APIKeysPerExchange ParseAPIKeys(std::string_view dataDir, const ExchangeSecretsInfo& exchangeSecretsInfo,
                                          settings::RunMode runMode);
 
   APIKeysPerExchange _apiKeysPerExchange;

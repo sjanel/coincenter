@@ -30,7 +30,7 @@
 
 namespace cct {
 
-MarketTraderEngine::MarketTraderEngine(const schema::ExchangeConfig &exchangeConfig, Market market,
+MarketTraderEngine::MarketTraderEngine(const schema::ExchangeConfig& exchangeConfig, Market market,
                                        MonetaryAmount startAmountBase, MonetaryAmount startAmountQuote)
     : _startAmountBase(startAmountBase),
       _startAmountQuote(startAmountQuote),
@@ -53,7 +53,7 @@ void MarketTraderEngine::registerMarketTrader(std::unique_ptr<AbstractMarketTrad
 namespace {
 
 template <class VectorType>
-TradeRangeResultsStats ValidateRange(VectorType &vec, TimePoint earliestPossibleTime) {
+TradeRangeResultsStats ValidateRange(VectorType& vec, TimePoint earliestPossibleTime) {
   using ObjType = std::remove_cvref_t<decltype(*std::declval<VectorType>().begin())>;
 
   static_assert(std::is_same_v<ObjType, MarketOrderBook> || std::is_same_v<ObjType, PublicTrade>);
@@ -65,12 +65,12 @@ TradeRangeResultsStats ValidateRange(VectorType &vec, TimePoint earliestPossible
   stats.nbSuccessful = static_cast<decltype(stats.nbSuccessful)>(vec.size());
 
   using std::erase_if;
-  const auto nbInvalidObjects = erase_if(vec, [](const auto &obj) { return !obj.isValid(); });
+  const auto nbInvalidObjects = erase_if(vec, [](const auto& obj) { return !obj.isValid(); });
   if (nbInvalidObjects != 0) {
     log::error("{} {}(s) with invalid data detected", nbInvalidObjects, kObjName);
   }
 
-  const auto nbUnsortedObjectsRemoved = erase_if(vec, [&earliestPossibleTime](const auto &obj) {
+  const auto nbUnsortedObjectsRemoved = erase_if(vec, [&earliestPossibleTime](const auto& obj) {
     if (obj.time() < earliestPossibleTime) {
       return true;
     }
@@ -93,8 +93,8 @@ TradeRangeResultsStats ValidateRange(VectorType &vec, TimePoint earliestPossible
 
 }  // namespace
 
-TradeRangeStats MarketTraderEngine::validateRange(MarketOrderBookVector &marketOrderBooks,
-                                                  PublicTradeVector &publicTrades) {
+TradeRangeStats MarketTraderEngine::validateRange(MarketOrderBookVector& marketOrderBooks,
+                                                  PublicTradeVector& publicTrades) {
   TimePoint earliestPossibleTime;
   if (_lastMarketOrderBook.market().isDefined()) {
     earliestPossibleTime = _lastMarketOrderBook.time();
@@ -107,8 +107,8 @@ TradeRangeStats MarketTraderEngine::validateRange(MarketOrderBookVector &marketO
   return tradeRangeStats;
 }
 
-TradeRangeStats MarketTraderEngine::validateRange(MarketOrderBookVector &&marketOrderBooks,
-                                                  PublicTradeVector &&publicTrades) {
+TradeRangeStats MarketTraderEngine::validateRange(MarketOrderBookVector&& marketOrderBooks,
+                                                  PublicTradeVector&& publicTrades) {
   const TradeRangeStats tradeRangeStats = validateRange(marketOrderBooks, publicTrades);
 
   if (!marketOrderBooks.empty()) {
@@ -118,8 +118,8 @@ TradeRangeStats MarketTraderEngine::validateRange(MarketOrderBookVector &&market
   return tradeRangeStats;
 }
 
-TradeRangeStats MarketTraderEngine::tradeRange(MarketOrderBookVector &&marketOrderBooks,
-                                               PublicTradeVector &&publicTrades) {
+TradeRangeStats MarketTraderEngine::tradeRange(MarketOrderBookVector&& marketOrderBooks,
+                                               PublicTradeVector&& publicTrades) {
   // errors set to 0 here as it is for unchecked launch
   TradeRangeStats tradeRangeStats{
       {TradeRangeResultsStats{TimeWindow{}, static_cast<int32_t>(marketOrderBooks.size()), 0}},
@@ -145,7 +145,7 @@ TradeRangeStats MarketTraderEngine::tradeRange(MarketOrderBookVector &&marketOrd
   MarketDataView marketDataView(marketOrderBooks.data(), publicTrades.data(),
                                 publicTrades.data() + publicTrades.size());
 
-  for (const MarketOrderBook &marketOrderBook : marketOrderBooks) {
+  for (const MarketOrderBook& marketOrderBook : marketOrderBooks) {
     // First check opened orders status with new market order book data that may match some
     checkOpenedOrdersMatching(marketOrderBook);
 
@@ -220,7 +220,7 @@ MarketTradingResult MarketTraderEngine::finalizeAndComputeResult() {
           ClosedOrderVector(closedOrdersSpan.begin(), closedOrdersSpan.end())};
 }
 
-void MarketTraderEngine::buy(const MarketOrderBook &marketOrderBook, MonetaryAmount from, PriceStrategy priceStrategy) {
+void MarketTraderEngine::buy(const MarketOrderBook& marketOrderBook, MonetaryAmount from, PriceStrategy priceStrategy) {
   const auto ts = marketOrderBook.time();
 
   switch (priceStrategy) {
@@ -258,7 +258,7 @@ void MarketTraderEngine::buy(const MarketOrderBook &marketOrderBook, MonetaryAmo
   }
 }
 
-void MarketTraderEngine::sell(const MarketOrderBook &marketOrderBook, MonetaryAmount volume,
+void MarketTraderEngine::sell(const MarketOrderBook& marketOrderBook, MonetaryAmount volume,
                               PriceStrategy priceStrategy) {
   switch (priceStrategy) {
     case PriceStrategy::maker: {
@@ -293,7 +293,7 @@ void MarketTraderEngine::sell(const MarketOrderBook &marketOrderBook, MonetaryAm
   }
 }
 
-void MarketTraderEngine::updatePrice(const MarketOrderBook &marketOrderBook, TraderCommand traderCommand) {
+void MarketTraderEngine::updatePrice(const MarketOrderBook& marketOrderBook, TraderCommand traderCommand) {
   const auto orderIdIt = _marketTraderEngineState.findOpenedOrder(traderCommand.orderId());
   MonetaryAmount remainingAmount = orderIdIt->remainingVolume();
   TradeSide tradeSide = orderIdIt->side();
@@ -321,9 +321,9 @@ void MarketTraderEngine::cancelCommand(int32_t orderId) {
   }
 }
 
-void MarketTraderEngine::checkOpenedOrdersMatching(const MarketOrderBook &marketOrderBook) {
+void MarketTraderEngine::checkOpenedOrdersMatching(const MarketOrderBook& marketOrderBook) {
   _newlyClosedOrders.clear();
-  for (const OpenedOrder &openedOrder : _marketTraderEngineState.openedOrders()) {
+  for (const OpenedOrder& openedOrder : _marketTraderEngineState.openedOrders()) {
     const auto [newMatchedVolume, avgPrice] = marketOrderBook.avgPriceAndMatchedVolume(
         openedOrder.side(), openedOrder.remainingVolume(), openedOrder.price());
     if (newMatchedVolume == 0) {

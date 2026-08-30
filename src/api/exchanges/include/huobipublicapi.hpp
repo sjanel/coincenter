@@ -6,11 +6,11 @@
 #include <unordered_map>
 
 #include "cachedresult.hpp"
-#include "httpclient.hpp"
 #include "currencycode.hpp"
 #include "exchange-asset-config.hpp"
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
+#include "httpclient.hpp"
 #include "huobi-schema.hpp"
 #include "public-trade-vector.hpp"
 #include "volumeandpricenbdecimals.hpp"

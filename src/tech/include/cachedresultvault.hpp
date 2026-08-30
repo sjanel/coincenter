@@ -33,26 +33,26 @@ class CachedResultBase {
 template <class DurationT>
 class CachedResultVaultT {
  public:
-  void registerCachedResult(CachedResultBase<DurationT> &cacheResult) {
+  void registerCachedResult(CachedResultBase<DurationT>& cacheResult) {
     _cachedResults.push_back(std::addressof(cacheResult));
   }
 
   void freezeAll() {
     if (!_allFrozen) {
-      std::ranges::for_each(_cachedResults, [](CachedResultBase<DurationT> *p) { p->freeze(); });
+      std::ranges::for_each(_cachedResults, [](CachedResultBase<DurationT>* p) { p->freeze(); });
       _allFrozen = true;
     }
   }
 
   void unfreezeAll() noexcept {
     if (_allFrozen) {
-      std::ranges::for_each(_cachedResults, [](CachedResultBase<DurationT> *p) { p->unfreeze(); });
+      std::ranges::for_each(_cachedResults, [](CachedResultBase<DurationT>* p) { p->unfreeze(); });
       _allFrozen = false;
     }
   }
 
  private:
-  using CachedResultPtrs = vector<CachedResultBase<DurationT> *>;
+  using CachedResultPtrs = vector<CachedResultBase<DurationT>*>;
 
  public:
   using trivially_relocatable = is_trivially_relocatable<CachedResultPtrs>::type;

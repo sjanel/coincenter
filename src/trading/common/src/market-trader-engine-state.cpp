@@ -28,7 +28,7 @@ MonetaryAmount MarketTraderEngineState::computeSellVolume(TraderCommand traderCo
   return (_availableBaseAmount * traderCommand.amountIntensityPercentage()) / 100;
 }
 
-void MarketTraderEngineState::placeBuyOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime,
+void MarketTraderEngineState::placeBuyOrder(const schema::ExchangeConfig& exchangeConfig, TimePoint placedTime,
                                             MonetaryAmount remainingVolume, MonetaryAmount price,
                                             MonetaryAmount matchedVolume, MonetaryAmount from,
                                             schema::ExchangeTradeFeesConfig::FeeType feeType) {
@@ -42,7 +42,7 @@ void MarketTraderEngineState::placeBuyOrder(const schema::ExchangeConfig &exchan
   }
 }
 
-void MarketTraderEngineState::placeSellOrder(const schema::ExchangeConfig &exchangeConfig, TimePoint placedTime,
+void MarketTraderEngineState::placeSellOrder(const schema::ExchangeConfig& exchangeConfig, TimePoint placedTime,
                                              MonetaryAmount remainingVolume, MonetaryAmount price,
                                              MonetaryAmount matchedVolume,
                                              schema::ExchangeTradeFeesConfig::FeeType feeType) {
@@ -56,18 +56,18 @@ void MarketTraderEngineState::placeSellOrder(const schema::ExchangeConfig &excha
   }
 }
 
-void MarketTraderEngineState::adjustOpenedOrderRemainingVolume(const OpenedOrder &matchedOrder,
+void MarketTraderEngineState::adjustOpenedOrderRemainingVolume(const OpenedOrder& matchedOrder,
                                                                MonetaryAmount newMatchedVolume) {
   auto openedOrderIt = std::ranges::find_if(
-      _openedOrders, [&matchedOrder](const auto &openedOrder) { return matchedOrder.id() == openedOrder.id(); });
+      _openedOrders, [&matchedOrder](const auto& openedOrder) { return matchedOrder.id() == openedOrder.id(); });
 
   *openedOrderIt = OpenedOrder(matchedOrder.id(), matchedOrder.matchedVolume() + newMatchedVolume,
                                matchedOrder.remainingVolume() - newMatchedVolume, matchedOrder.price(),
                                matchedOrder.placedTime(), matchedOrder.side());
 }
 
-void MarketTraderEngineState::countMatchedPart(const schema::ExchangeConfig &exchangeConfig,
-                                               const OpenedOrder &matchedOrder, MonetaryAmount price,
+void MarketTraderEngineState::countMatchedPart(const schema::ExchangeConfig& exchangeConfig,
+                                               const OpenedOrder& matchedOrder, MonetaryAmount price,
                                                MonetaryAmount newMatchedVolume, TimePoint matchedTime) {
   switch (matchedOrder.side()) {
     case TradeSide::buy:
@@ -87,7 +87,7 @@ void MarketTraderEngineState::countMatchedPart(const schema::ExchangeConfig &exc
 
   auto closedOrderIt =
       std::ranges::find_if(_closedOrders.rbegin(), _closedOrders.rend(),
-                           [&matchedOrder](const auto &closedOrder) { return closedOrder.id() == matchedOrder.id(); });
+                           [&matchedOrder](const auto& closedOrder) { return closedOrder.id() == matchedOrder.id(); });
   if (closedOrderIt != _closedOrders.rend()) {
     *closedOrderIt = closedOrderIt->mergeWith(newClosedOrder);
   } else {
@@ -102,7 +102,7 @@ void MarketTraderEngineState::cancelOpenedOrder(int32_t orderId) {
 }
 
 OpenedOrderVector::const_iterator MarketTraderEngineState::findOpenedOrder(int32_t orderId) {
-  const auto orderIdIt = std::ranges::find_if(_openedOrders, [orderId](const OpenedOrder &openedOrder) {
+  const auto orderIdIt = std::ranges::find_if(_openedOrders, [orderId](const OpenedOrder& openedOrder) {
     return StringToIntegral<int32_t>(openedOrder.id()) == orderId;
   });
   if (orderIdIt == _openedOrders.end()) {
@@ -113,11 +113,11 @@ OpenedOrderVector::const_iterator MarketTraderEngineState::findOpenedOrder(int32
 
 void MarketTraderEngineState::cancelAllOpenedOrders() {
   std::ranges::for_each(_openedOrders,
-                        [this](const OpenedOrder &openedOrder) { this->adjustAvailableAmountsCancel(openedOrder); });
+                        [this](const OpenedOrder& openedOrder) { this->adjustAvailableAmountsCancel(openedOrder); });
   _openedOrders.clear();
 }
 
-void MarketTraderEngineState::adjustAvailableAmountsCancel(const OpenedOrder &openedOrder) {
+void MarketTraderEngineState::adjustAvailableAmountsCancel(const OpenedOrder& openedOrder) {
   switch (openedOrder.side()) {
     case TradeSide::buy:
       _availableQuoteAmount += openedOrder.remainingVolume().toNeutral() * openedOrder.price();
@@ -131,8 +131,8 @@ void MarketTraderEngineState::adjustAvailableAmountsCancel(const OpenedOrder &op
 }
 
 void MarketTraderEngineState::eraseClosedOpenedOrders(std::span<const OpenedOrder> closedOpenedOrders) {
-  const auto [first, last] = std::ranges::remove_if(_openedOrders, [closedOpenedOrders](const auto &openedOrder) {
-    return std::ranges::any_of(closedOpenedOrders, [&openedOrder](const auto &closedOpenedOrder) {
+  const auto [first, last] = std::ranges::remove_if(_openedOrders, [closedOpenedOrders](const auto& openedOrder) {
+    return std::ranges::any_of(closedOpenedOrders, [&openedOrder](const auto& closedOpenedOrder) {
       return openedOrder.id() == closedOpenedOrder.id();
     });
   });

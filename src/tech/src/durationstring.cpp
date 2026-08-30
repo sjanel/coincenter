@@ -70,7 +70,7 @@ std::string_view::size_type DurationLen(std::string_view str) {
     }
     const std::string_view timeUnitStr(str.begin() + first, str.begin() + charPos);
 
-    const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto &durationUnitWithDuration) {
+    const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto& durationUnitWithDuration) {
       return durationUnitWithDuration.first == timeUnitStr;
     });
     if (it == std::end(kDurationUnits)) {
@@ -124,7 +124,7 @@ Duration ParseDuration(std::string_view durationStr) {
       ++charPos;
     }
     const std::string_view timeUnitStr(durationStr.begin() + unitFirst, durationStr.begin() + charPos);
-    const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto &durationUnitWithDuration) {
+    const auto it = std::ranges::find_if(kDurationUnits, [timeUnitStr](const auto& durationUnitWithDuration) {
       return durationUnitWithDuration.first == timeUnitStr;
     });
     if (it == std::end(kDurationUnits)) {
@@ -141,7 +141,7 @@ Duration ParseDuration(std::string_view durationStr) {
 
 namespace {
 
-bool AdjustWithUnit(UnitDuration unitDuration, Duration &dur, int &nbSignificantUnits, string &ret) {
+bool AdjustWithUnit(UnitDuration unitDuration, Duration& dur, int& nbSignificantUnits, string& ret) {
   if (dur >= unitDuration.second) {
     const auto countInThisDurationUnit =
         std::chrono::duration_cast<decltype(unitDuration.second)>(dur).count() / unitDuration.second.count();
@@ -156,7 +156,7 @@ bool AdjustWithUnit(UnitDuration unitDuration, Duration &dur, int &nbSignificant
   return false;
 }
 
-bool AdjustWithUnit(UnitDuration unitDuration, Duration &dur, int &nbSignificantUnits, std::span<char> &ret) {
+bool AdjustWithUnit(UnitDuration unitDuration, Duration& dur, int& nbSignificantUnits, std::span<char>& ret) {
   if (dur >= unitDuration.second) {
     const auto countInThisDurationUnit =
         std::chrono::duration_cast<decltype(unitDuration.second)>(dur).count() / unitDuration.second.count();
@@ -192,7 +192,7 @@ string DurationToString(Duration dur, int nbSignificantUnits) {
       ret.push_back('-');
       dur = -dur;
     }
-    std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &ret](const auto &unitDuration) {
+    std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &ret](const auto& unitDuration) {
       return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, ret);
     });
   }
@@ -216,7 +216,7 @@ std::span<char> DurationToBuffer(Duration dur, std::span<char> buffer, int nbSig
     dur = -dur;
   }
 
-  std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &buffer](const auto &unitDuration) {
+  std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &buffer](const auto& unitDuration) {
     return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, buffer);
   });
 

@@ -19,7 +19,7 @@ class WithdrawsOrDepositsConstraints {
 
   explicit WithdrawsOrDepositsConstraints(CurrencyCode currencyCode = CurrencyCode(),
                                           Duration minAge = kUndefinedDuration, Duration maxAge = kUndefinedDuration,
-                                          IdSet &&idSet = IdSet());
+                                          IdSet&& idSet = IdSet());
 
   // Creates a WithdrawsOrDepositsConstraints based on a single transaction id and currency code.
   // Useful for retrieval of a specific Deposit / Withdraw.
@@ -41,7 +41,7 @@ class WithdrawsOrDepositsConstraints {
 
   bool validateId(std::string_view id) const { return !isIdDefined() || _idSet.contains(id); }
 
-  const IdSet &idSet() const { return _idSet; }
+  const IdSet& idSet() const { return _idSet; }
 
   bool isCurDefined() const { return !_currencyCode.isNeutral(); }
   bool isIdDefined() const { return !_idSet.empty(); }
@@ -52,7 +52,7 @@ class WithdrawsOrDepositsConstraints {
   }
   bool isIdOnlyDependent() const { return _currencyIdTimeConstraintsBmp.isDepositIdOnlyDependent(); }
 
-  bool operator==(const WithdrawsOrDepositsConstraints &) const noexcept = default;
+  bool operator==(const WithdrawsOrDepositsConstraints&) const noexcept = default;
 
   using trivially_relocatable = is_trivially_relocatable<IdSet>::type;
 
@@ -68,7 +68,7 @@ class WithdrawsOrDepositsConstraints {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::WithdrawsOrDepositsConstraints> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -78,7 +78,7 @@ struct fmt::formatter<cct::WithdrawsOrDepositsConstraints> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::WithdrawsOrDepositsConstraints &constraints, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::WithdrawsOrDepositsConstraints& constraints, FormatContext& ctx) const -> decltype(ctx.out()) {
     if (constraints.isCurDefined()) {
       ctx.out() = fmt::format_to(ctx.out(), "{} currency", constraints.currencyCode());
     } else {

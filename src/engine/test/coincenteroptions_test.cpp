@@ -46,7 +46,7 @@ TEST_F(CoincenterCmdLineOptionsTest, DefaultConstructorShouldValueInitializeAll)
   // default construct
   ::new (data) CoincenterCmdLineOptions;
 
-  const auto *pRhs = reinterpret_cast<const CoincenterCmdLineOptions *>(data);
+  const auto* pRhs = reinterpret_cast<const CoincenterCmdLineOptions*>(data);
 
   EXPECT_EQ(opts, *pRhs);
 

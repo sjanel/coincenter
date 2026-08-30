@@ -844,7 +844,7 @@ TEST(MonetaryAmountTest, CurrentMaxNbDecimals) {
 }
 
 struct Foo {
-  bool operator==(const Foo &) const noexcept = default;
+  bool operator==(const Foo&) const noexcept = default;
 
   MonetaryAmount amount;
 };
@@ -866,7 +866,9 @@ TEST(MonetaryAmountTest, JsonSerializationFormatted) {
   string buffer;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::write<json::opts_ex{{.prettify = true}, /*raw_string*/ false, /*error_on_const_read*/ false,
+  auto ec = json::write<json::opts_ex{{.prettify = true},
+                                      /*raw_string*/ false,
+                                      /*error_on_const_read*/ false,
                                       /*indentation_width*/ 2}>(foo, buffer);
 
   EXPECT_FALSE(ec);
@@ -891,7 +893,8 @@ TEST(MonetaryAmountTest, JsonSerializationKey) {
   std::map<MonetaryAmount, bool> map{{MonetaryAmount("15DOGE"), true}, {MonetaryAmount("-0.5605 DOGE"), false}};
 
   string buffer;
-  auto res = json::write<json::opts_ex{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
+  auto res =
+      json::write<json::opts_ex{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -906,7 +909,8 @@ TEST(MonetaryAmountTest, JsonSerializationVector) {
   Bar bar;
 
   string buffer;
-  auto res = json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+  auto res =
+      json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 

@@ -8,9 +8,9 @@
 #include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_type_traits.hpp"
+#include "durationstring.hpp"
 #include "httpclient.hpp"
 #include "httprequestoptions.hpp"
-#include "durationstring.hpp"
 #include "query-retry-policy.hpp"
 #include "timedef.hpp"
 #include "unreachable.hpp"
@@ -27,21 +27,22 @@ class RequestRetry {
  private:
   // {raw_string, error_on_const_read} are opts_ex (derived) members; base members
   // (error_on_unknown_keys, minified) go in the nested brace.
-  static constexpr auto kDefaultJsonOpts =
-      json::opts_ex{{.error_on_unknown_keys = false, .minified = true}, /*raw_string*/ true,
-                    /*error_on_const_read*/ true};
+  static constexpr auto kDefaultJsonOpts = json::opts_ex{{.error_on_unknown_keys = false, .minified = true},
+                                                         /*raw_string*/ true,
+                                                         /*error_on_const_read*/ true};
 
  public:
-  RequestRetry(HttpClient &httpClient, HttpRequestOptions requestOptions, QueryRetryPolicy queryRetryPolicy = QueryRetryPolicy())
+  RequestRetry(HttpClient& httpClient, HttpRequestOptions requestOptions,
+               QueryRetryPolicy queryRetryPolicy = QueryRetryPolicy())
       : _httpClient(httpClient), _requestOptions(std::move(requestOptions)), _queryRetryPolicy(queryRetryPolicy) {}
 
   template <class T, auto opts = kDefaultJsonOpts>
-  T query(const auto &endpoint, auto responseStatus) {
-    return query<T, opts>(endpoint, responseStatus, [](HttpRequestOptions &) {});
+  T query(const auto& endpoint, auto responseStatus) {
+    return query<T, opts>(endpoint, responseStatus, [](HttpRequestOptions&) {});
   }
 
   template <class T, auto opts = kDefaultJsonOpts>
-  T query(const auto &endpoint, auto responseStatus, auto postDataUpdateFunc) {
+  T query(const auto& endpoint, auto responseStatus, auto postDataUpdateFunc) {
     auto sleepingTime = _queryRetryPolicy.initialRetryDelay;
     decltype(_queryRetryPolicy.nbMaxRetries) nbRetries = 0;
     bool parsingError;
@@ -95,7 +96,7 @@ class RequestRetry {
   using trivially_relocatable = is_trivially_relocatable<HttpRequestOptions>::type;
 
  private:
-  HttpClient &_httpClient;
+  HttpClient& _httpClient;
   HttpRequestOptions _requestOptions;
   QueryRetryPolicy _queryRetryPolicy;
 };

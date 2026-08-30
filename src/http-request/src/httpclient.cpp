@@ -1,13 +1,13 @@
 #include "httpclient.hpp"
 
-#include <aeronet/client-request.hpp>
 #include <aeronet/http-client-config.hpp>
 #include <aeronet/http-client-error.hpp>
 #include <aeronet/http-client.hpp>
+#include <aeronet/http-header.hpp>
 #include <aeronet/http-method.hpp>
+#include <aeronet/http-request.hpp>
 #include <aeronet/http-response.hpp>
 #include <aeronet/version.hpp>
-
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -73,8 +73,8 @@ string GetHttpClientVersionInfo() {
 
 HttpClient::HttpClient() noexcept = default;
 
-HttpClient::HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetricGateway,
-                       const PermanentRequestOptions &permanentRequestOptions, settings::RunMode runMode)
+HttpClient::HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway* pMetricGateway,
+                       const PermanentRequestOptions& permanentRequestOptions, settings::RunMode runMode)
     : _pMetricGateway(pMetricGateway),
       _minDurationBetweenQueries(permanentRequestOptions.minDurationBetweenQueries()),
       _bestURLPicker(std::move(bestURLPicker)),
@@ -88,22 +88,23 @@ HttpClient::HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
   }
 
   aeronet::HttpClientConfig config;
+  config.globalHeaders.clear();
 
-  const string &userAgent = permanentRequestOptions.getUserAgent();
+  const string& userAgent = permanentRequestOptions.getUserAgent();
   if (userAgent.empty()) {
     string defaultUserAgent = "coincenter ";
     defaultUserAgent.append(CCT_VERSION);
     defaultUserAgent.append(", aeronet ");
     defaultUserAgent.append(aeronet::version());
-    config.withUserAgent(defaultUserAgent);
+    config.addGlobalHeader(aeronet::http::Header("user-agent", defaultUserAgent));
   } else {
-    config.withUserAgent(userAgent);
+    config.addGlobalHeader(aeronet::http::Header("user-agent", userAgent));
   }
 
   // aeronet transparently advertises (Accept-Encoding) and decodes the compression codecs it was
   // compiled with (gzip / deflate / zstd / brotli). An explicit accepted encoding, when provided,
   // overrides that auto-advertising.
-  const string &acceptedEncoding = permanentRequestOptions.getAcceptedEncoding();
+  const string& acceptedEncoding = permanentRequestOptions.getAcceptedEncoding();
   if (!acceptedEncoding.empty()) {
     config.withDefaultAcceptEncoding(acceptedEncoding);
   }
@@ -116,8 +117,8 @@ HttpClient::HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
 
   _client = new aeronet::HttpClient(std::move(config));
 
-  log::debug("Initialize HttpClient for {} with {} as minimum duration between queries", _bestURLPicker.getNextBaseURL(),
-             DurationToString(_minDurationBetweenQueries));
+  log::debug("Initialize HttpClient for {} with {} as minimum duration between queries",
+             _bestURLPicker.getNextBaseURL(), DurationToString(_minDurationBetweenQueries));
 
   if (settings::IsProxyRequested(runMode)) {
     // aeronet's HttpClient does not (yet) support forwarding through an HTTP proxy.
@@ -125,8 +126,8 @@ HttpClient::HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway *pMetr
   }
 }
 
-std::string_view HttpClient::query(std::string_view endpoint, const HttpRequestOptions &opts) {
-  const HttpPostData &postData = opts.postData();
+std::string_view HttpClient::query(std::string_view endpoint, const HttpRequestOptions& opts) {
+  const HttpPostData& postData = opts.postData();
   const bool queryResponseOverrideMode = !_client;
   const bool appendParametersInQueryStr =
       !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
@@ -162,9 +163,9 @@ std::string_view HttpClient::query(std::string_view endpoint, const HttpRequestO
   }
 
   // Build the request. Content-Type must be routed through body() (aeronet rejects it as a raw header).
-  aeronet::ClientRequest req(ToAeronetMethod(opts.requestType()), modifiedURL);
+  auto req = _client->makeRequest(ToAeronetMethod(opts.requestType()), modifiedURL);
   std::string_view contentType;
-  for (const auto &header : opts.httpHeaders()) {
+  for (const auto& header : opts.httpHeaders()) {
     if (IsContentTypeHeader(header.key())) {
       contentType = header.val();
     } else {
@@ -283,7 +284,8 @@ std::string_view HttpClient::query(std::string_view endpoint, const HttpRequestO
   if (!mayBeJsonResponse && _queryData.size() > kMaxLenResponse) {
     const std::string_view outPrinted(_queryData.begin(),
                                       _queryData.begin() + std::min(_queryData.size(), kMaxLenResponse));
-    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "Truncated non JSON response {}...", outPrinted);
+    log::log(static_cast<log::level::level_enum>(_requestCallLogLevel), "Truncated non JSON response {}...",
+             outPrinted);
   } else {
     log::log(static_cast<log::level::level_enum>(_requestAnswerLogLevel), "Full{}JSON response {}",
              mayBeJsonResponse ? " " : " non ", _queryData);
@@ -292,19 +294,19 @@ std::string_view HttpClient::query(std::string_view endpoint, const HttpRequestO
   return _queryData;
 }
 
-void HttpClient::setOverridenQueryResponses(const std::map<string, string> &queryResponsesMap) {
+void HttpClient::setOverridenQueryResponses(const std::map<string, string>& queryResponsesMap) {
   if (_client) {
     throw exception(
         "HttpClient should be created in Query response override mode in order to override its next response");
   }
   FlatQueryResponseMap flatQueryResponses;
-  for (const auto &[query, response] : queryResponsesMap) {
+  for (const auto& [query, response] : queryResponsesMap) {
     flatQueryResponses.emplace_back(query, response);
   }
   _queryData = string(flatQueryResponses.str());
 }
 
-void HttpClient::swap(HttpClient &rhs) noexcept {
+void HttpClient::swap(HttpClient& rhs) noexcept {
   using std::swap;
 
   swap(_client, rhs._client);
@@ -319,9 +321,9 @@ void HttpClient::swap(HttpClient &rhs) noexcept {
   swap(_tooManyErrorsPolicy, rhs._tooManyErrorsPolicy);
 }
 
-HttpClient::HttpClient(HttpClient &&rhs) noexcept { swap(rhs); }
+HttpClient::HttpClient(HttpClient&& rhs) noexcept { swap(rhs); }
 
-HttpClient &HttpClient::operator=(HttpClient &&rhs) noexcept {
+HttpClient& HttpClient::operator=(HttpClient&& rhs) noexcept {
   swap(rhs);
   return *this;
 }

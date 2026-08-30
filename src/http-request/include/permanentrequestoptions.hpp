@@ -17,9 +17,9 @@ class PermanentRequestOptions {
 
   PermanentRequestOptions() noexcept = default;
 
-  const auto &getUserAgent() const { return _userAgent; }
+  const auto& getUserAgent() const { return _userAgent; }
 
-  const auto &getAcceptedEncoding() const { return _acceptedEncoding; }
+  const auto& getAcceptedEncoding() const { return _acceptedEncoding; }
 
   auto minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
@@ -38,67 +38,67 @@ class PermanentRequestOptions {
    public:
     Builder() noexcept = default;
 
-    Builder &setUserAgent(string userAgent) {
+    Builder& setUserAgent(string userAgent) {
       _userAgent = std::move(userAgent);
       return *this;
     }
 
-    Builder &setUserAgent(std::string_view userAgent) {
+    Builder& setUserAgent(std::string_view userAgent) {
       _userAgent = string(userAgent);
       return *this;
     }
 
-    Builder &setUserAgent(const char *userAgent) {
+    Builder& setUserAgent(const char* userAgent) {
       _userAgent = string(userAgent);
       return *this;
     }
 
-    Builder &setAcceptedEncoding(string acceptedEncoding) {
+    Builder& setAcceptedEncoding(string acceptedEncoding) {
       _acceptedEncoding = std::move(acceptedEncoding);
       return *this;
     }
 
-    Builder &setAcceptedEncoding(std::string_view acceptedEncoding) {
+    Builder& setAcceptedEncoding(std::string_view acceptedEncoding) {
       _acceptedEncoding = string(acceptedEncoding);
       return *this;
     }
 
-    Builder &setAcceptedEncoding(const char *acceptedEncoding) {
+    Builder& setAcceptedEncoding(const char* acceptedEncoding) {
       _acceptedEncoding = string(acceptedEncoding);
       return *this;
     }
 
-    Builder &setMinDurationBetweenQueries(Duration minDurationBetweenQueries) {
+    Builder& setMinDurationBetweenQueries(Duration minDurationBetweenQueries) {
       _minDurationBetweenQueries = minDurationBetweenQueries;
       return *this;
     }
 
-    Builder &setRequestCallLogLevel(LogLevel requestCallLogLevel) {
+    Builder& setRequestCallLogLevel(LogLevel requestCallLogLevel) {
       _requestCallLogLevel = requestCallLogLevel;
       return *this;
     }
 
-    Builder &setRequestAnswerLogLevel(LogLevel requestAnswerLogLevel) {
+    Builder& setRequestAnswerLogLevel(LogLevel requestAnswerLogLevel) {
       _requestAnswerLogLevel = requestAnswerLogLevel;
       return *this;
     }
 
-    Builder &setNbMaxRetries(int nbMaxRetries) {
+    Builder& setNbMaxRetries(int nbMaxRetries) {
       _nbMaxRetries = nbMaxRetries;
       return *this;
     }
 
-    Builder &setFollowLocation() {
+    Builder& setFollowLocation() {
       _followLocation = true;
       return *this;
     }
 
-    Builder &setTooManyErrorsPolicy(TooManyErrorsPolicy tooManyErrorsPolicy) {
+    Builder& setTooManyErrorsPolicy(TooManyErrorsPolicy tooManyErrorsPolicy) {
       _tooManyErrorsPolicy = tooManyErrorsPolicy;
       return *this;
     }
 
-    Builder &setTimeout(Duration timeout) {
+    Builder& setTimeout(Duration timeout) {
       _timeout = timeout;
       return *this;
     }
@@ -128,9 +128,9 @@ class PermanentRequestOptions {
   };
 
  private:
-  PermanentRequestOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries, Duration timeout,
-                       LogLevel requestCallLogLevel, LogLevel requestAnswerLogLevel, int nbMaxRetries,
-                       bool followLocation, TooManyErrorsPolicy tooManyErrorsPolicy)
+  PermanentRequestOptions(string userAgent, string acceptedEncoding, Duration minDurationBetweenQueries,
+                          Duration timeout, LogLevel requestCallLogLevel, LogLevel requestAnswerLogLevel,
+                          int nbMaxRetries, bool followLocation, TooManyErrorsPolicy tooManyErrorsPolicy)
       : _userAgent(std::move(userAgent)),
         _acceptedEncoding(std::move(acceptedEncoding)),
         _minDurationBetweenQueries(minDurationBetweenQueries),

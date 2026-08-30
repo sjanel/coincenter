@@ -13,7 +13,7 @@
 namespace cct::schema {
 
 struct Duration {
-  auto operator<=>(const Duration &) const noexcept = default;
+  auto operator<=>(const Duration&) const noexcept = default;
 
   ::cct::Duration duration{};
 };
@@ -23,7 +23,7 @@ struct Duration {
 namespace std {
 template <>
 struct hash<::cct::schema::Duration> {
-  auto operator()(const ::cct::schema::Duration &val) const {
+  auto operator()(const ::cct::schema::Duration& val) const {
     return ::cct::HashValue64(
         static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(val.duration).count()));
   }
@@ -39,7 +39,7 @@ namespace glz {
 template <>
 struct from<JSON, ::cct::schema::Duration> {
   template <auto Opts, class It, class End>
-  static void op(auto &&value, is_context auto &&, It &&it, End &&end) {
+  static void op(auto&& value, is_context auto&&, It&& it, End&& end) {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
     value.duration = ::cct::ParseDuration(std::string_view(it, endIt));
@@ -50,7 +50,7 @@ struct from<JSON, ::cct::schema::Duration> {
 template <>
 struct to<JSON, ::cct::schema::Duration> {
   template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+  static void op(auto&& value, Ctx&&, B&& b, IX&& ix) {
     char buf[30];
     static constexpr int kNbSignificantUnits = 10;
     auto adjustedBuf = ::cct::DurationToBuffer(value.duration, buf, kNbSignificantUnits);

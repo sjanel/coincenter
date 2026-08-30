@@ -20,7 +20,7 @@ namespace cct {
 
 namespace {
 
-schema::GeneralConfig LoadGeneralConfigAndOverrideOptionsFromCLI(const CoincenterCmdLineOptions &cmdLineOptions) {
+schema::GeneralConfig LoadGeneralConfigAndOverrideOptionsFromCLI(const CoincenterCmdLineOptions& cmdLineOptions) {
   schema::GeneralConfig generalConfig = ReadGeneralConfig(cmdLineOptions.getDataDir());
 
   // Override general config options from CLI
@@ -38,7 +38,7 @@ schema::GeneralConfig LoadGeneralConfigAndOverrideOptionsFromCLI(const Coincente
   return generalConfig;
 }
 
-MonitoringInfo MonitoringInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions) {
+MonitoringInfo MonitoringInfo_Create(std::string_view programName, const CoincenterCmdLineOptions& cmdLineOptions) {
   return {cmdLineOptions.useMonitoring,      programName,
           cmdLineOptions.monitoringAddress,  cmdLineOptions.monitoringPort,
           cmdLineOptions.monitoringUsername, cmdLineOptions.monitoringPassword};
@@ -46,7 +46,7 @@ MonitoringInfo MonitoringInfo_Create(std::string_view programName, const Coincen
 
 }  // namespace
 
-CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions &cmdLineOptions,
+CoincenterInfo CoincenterInfo_Create(std::string_view programName, const CoincenterCmdLineOptions& cmdLineOptions,
                                      settings::RunMode runMode) {
   const auto dataDir = cmdLineOptions.getDataDir();
   LoggingInfo loggingInfo(LoggingInfo::WithLoggersCreation::kNo, dataDir);
@@ -74,7 +74,7 @@ CoincenterInfo CoincenterInfo_Create(std::string_view programName, const Coincen
                         stableCoinsFile, currencyPrefixesTranslatorFile);
 }
 
-ExchangeSecretsInfo ExchangeSecretsInfo_Create(const CoincenterCmdLineOptions &cmdLineOptions) {
+ExchangeSecretsInfo ExchangeSecretsInfo_Create(const CoincenterCmdLineOptions& cmdLineOptions) {
   if (cmdLineOptions.noSecrets) {
     StringOptionParser anyParser(*cmdLineOptions.noSecrets);
     return ExchangeSecretsInfo(anyParser.parseExchanges());

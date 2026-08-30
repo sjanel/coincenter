@@ -182,9 +182,9 @@ class MonetaryAmount {
   /// Rounds current monetary amount according to given precision (number of decimals)
   void round(int8_t nbDecimals, RoundType roundType);
 
-  [[nodiscard]] std::strong_ordering operator<=>(const MonetaryAmount &other) const;
+  [[nodiscard]] std::strong_ordering operator<=>(const MonetaryAmount& other) const;
 
-  [[nodiscard]] constexpr bool operator==(const MonetaryAmount &) const noexcept = default;
+  [[nodiscard]] constexpr bool operator==(const MonetaryAmount&) const noexcept = default;
 
   /// Note: for comparison with numbers (integrals or double), only the amount is compared.
   /// To be consistent with operator<=>, the currency will be ignored for equality.
@@ -215,8 +215,8 @@ class MonetaryAmount {
 
   [[nodiscard]] MonetaryAmount operator-(MonetaryAmount other) const { return *this + (-other); }
 
-  MonetaryAmount &operator+=(MonetaryAmount other) { return *this = *this + other; }
-  MonetaryAmount &operator-=(MonetaryAmount other) { return *this = *this + (-other); }
+  MonetaryAmount& operator+=(MonetaryAmount other) { return *this = *this + other; }
+  MonetaryAmount& operator-=(MonetaryAmount other) { return *this = *this + (-other); }
 
   [[nodiscard]] MonetaryAmount operator*(AmountType mult) const;
   [[nodiscard]] friend MonetaryAmount operator*(MonetaryAmount rhs, std::signed_integral auto mult) {
@@ -237,9 +237,9 @@ class MonetaryAmount {
   ///  - XXXXXXX * YYYYYYY -> ??????? (exception will be thrown in this case)
   [[nodiscard]] MonetaryAmount operator*(MonetaryAmount mult) const;
 
-  MonetaryAmount &operator*=(std::signed_integral auto mult) { return *this = *this * mult; }
-  MonetaryAmount &operator*=(MonetaryAmount mult) { return *this = *this * mult; }
-  MonetaryAmount &operator*=(double mult) { return *this = *this * mult; }
+  MonetaryAmount& operator*=(std::signed_integral auto mult) { return *this = *this * mult; }
+  MonetaryAmount& operator*=(MonetaryAmount mult) { return *this = *this * mult; }
+  MonetaryAmount& operator*=(double mult) { return *this = *this * mult; }
 
   [[nodiscard]] MonetaryAmount operator/(std::signed_integral auto div) const { return *this / MonetaryAmount(div); }
 
@@ -247,9 +247,9 @@ class MonetaryAmount {
 
   [[nodiscard]] MonetaryAmount operator/(MonetaryAmount div) const;
 
-  MonetaryAmount &operator/=(std::signed_integral auto div) { return *this = *this / div; }
-  MonetaryAmount &operator/=(MonetaryAmount div) { return *this = *this / div; }
-  MonetaryAmount &operator/=(double div) { return *this = *this / div; }
+  MonetaryAmount& operator/=(std::signed_integral auto div) { return *this = *this / div; }
+  MonetaryAmount& operator/=(MonetaryAmount div) { return *this = *this / div; }
+  MonetaryAmount& operator/=(double div) { return *this = *this / div; }
 
   [[nodiscard]] constexpr MonetaryAmount toNeutral() const noexcept {
     return {true, _amount, _curWithDecimals.toNeutral()};
@@ -309,7 +309,7 @@ class MonetaryAmount {
   }
 
   // optimization for char buffers
-  char *appendAmount(char *it) const {
+  char* appendAmount(char* it) const {
     if (_amount < 0) {
       *it++ = '-';
     }
@@ -355,7 +355,7 @@ class MonetaryAmount {
     return ret;
   }
 
-  void appendAmountStr(string &str) const {
+  void appendAmountStr(string& str) const {
     str.append(kMaxNbCharsAmount, '\0');
     auto endIt = str.end();
     str.erase(appendAmount(endIt - kMaxNbCharsAmount), endIt);
@@ -368,7 +368,7 @@ class MonetaryAmount {
     return ret;
   }
 
-  void appendStrTo(string &str) const {
+  void appendStrTo(string& str) const {
     appendAmountStr(str);
     appendCurrencyStr(str);
   }
@@ -377,14 +377,14 @@ class MonetaryAmount {
     return HashCombine(static_cast<std::size_t>(_amount), static_cast<std::size_t>(_curWithDecimals.code()));
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const MonetaryAmount &ma);
+  friend std::ostream& operator<<(std::ostream& os, const MonetaryAmount& ma);
 
  private:
   using UnsignedAmountType = uint64_t;
 
   static constexpr AmountType kMaxAmountFullNDigits = ipow10(std::numeric_limits<AmountType>::digits10);
 
-  void appendCurrencyStr(string &str) const {
+  void appendCurrencyStr(string& str) const {
     if (!_curWithDecimals.isNeutral()) {
       _curWithDecimals.appendStrWithSpaceTo(str);
     }
@@ -442,7 +442,7 @@ static_assert(std::is_trivially_copyable_v<MonetaryAmount>, "MonetaryAmount shou
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::MonetaryAmount> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -452,7 +452,7 @@ struct fmt::formatter<cct::MonetaryAmount> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::MonetaryAmount &ma, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::MonetaryAmount& ma, FormatContext& ctx) const -> decltype(ctx.out()) {
     return ma.appendTo(ctx.out());
   }
 };
@@ -462,7 +462,7 @@ struct fmt::formatter<cct::MonetaryAmount> {
 namespace std {
 template <>
 struct hash<::cct::MonetaryAmount> {
-  auto operator()(const ::cct::MonetaryAmount &monetaryAmount) const { return monetaryAmount.hashCode(); }
+  auto operator()(const ::cct::MonetaryAmount& monetaryAmount) const { return monetaryAmount.hashCode(); }
 };
 }  // namespace std
 
@@ -470,7 +470,7 @@ namespace glz {
 template <>
 struct from<JSON, ::cct::MonetaryAmount> {
   template <auto Opts, class It, class End>
-  static void op(auto &&value, is_context auto &&, It &&it, End &&end) noexcept {
+  static void op(auto&& value, is_context auto&&, It&& it, End&& end) noexcept {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
     value = ::cct::MonetaryAmount(std::string_view(it, endIt));
@@ -481,7 +481,7 @@ struct from<JSON, ::cct::MonetaryAmount> {
 template <>
 struct to<JSON, ::cct::MonetaryAmount> {
   template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+  static void op(auto&& value, Ctx&&, B&& b, IX&& ix) {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };

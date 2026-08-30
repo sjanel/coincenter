@@ -24,8 +24,6 @@
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
 #include "commonapi.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchange.hpp"
@@ -35,6 +33,8 @@
 #include "exchangepublicapi.hpp"
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
+#include "httpclient.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
@@ -99,7 +99,8 @@ T PublicQuery(HttpClient& httpClient, std::string_view method, CurrencyCode base
 
 BithumbPublic::BithumbPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::bithumb, fiatConverter, commonAPI, config),
-      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
+                  config.getRunMode()),
       _tradableCurrenciesCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::currencies), _cachedResultVault),
           config, commonAPI, _httpClient),

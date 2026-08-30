@@ -9,10 +9,10 @@ on:
 jobs:
   ubuntu-clang-tidy-build:
     name: Build on Ubuntu with clang-tidy checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        clang-version: [20]
+        clang-version: [21]
         buildmode: [Debug]
 
     steps:

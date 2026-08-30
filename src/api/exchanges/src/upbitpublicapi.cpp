@@ -14,9 +14,6 @@
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"
-#include "httpclient.hpp"
-#include "httprequestoptions.hpp"
-#include "httppostdata.hpp"
 #include "currencycode.hpp"
 #include "currencycodeset.hpp"
 #include "currencyexchangeflatset.hpp"
@@ -25,6 +22,9 @@
 #include "exchangepublicapitypes.hpp"
 #include "fiatconverter.hpp"
 #include "file.hpp"
+#include "httpclient.hpp"
+#include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
 #include "marketorderbook.hpp"
@@ -54,7 +54,8 @@ T PublicQuery(HttpClient& httpClient, std::string_view endpoint, HttpPostData&& 
 
 UpbitPublic::UpbitPublic(const CoincenterInfo& config, FiatConverter& fiatConverter, CommonAPI& commonAPI)
     : ExchangePublic(ExchangeNameEnum::upbit, fiatConverter, commonAPI, config),
-      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(), config.getRunMode()),
+      _httpClient(kUrlBase, config.metricGatewayPtr(), permanentHttpRequestOptionsBuilder().build(),
+                  config.getRunMode()),
       _marketsCache(
           CachedResultOptions(exchangeConfig().query.getUpdateFrequency(QueryType::markets), _cachedResultVault),
           _httpClient, exchangeConfig().asset),

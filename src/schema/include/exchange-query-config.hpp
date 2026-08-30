@@ -26,7 +26,7 @@ namespace details {
 template <bool Optional>
 struct ExchangeQueryHttpConfig {
   template <class T>
-  void mergeWith(const T &other)
+  void mergeWith(const T& other)
     requires(std::is_same_v<T, ExchangeQueryHttpConfig<true>> && !Optional)
   {
     if (other.timeout) {
@@ -40,7 +40,7 @@ struct ExchangeQueryHttpConfig {
 template <bool Optional>
 struct ExchangeQueryTradeConfig {
   template <class T>
-  void mergeWith(const T &other)
+  void mergeWith(const T& other)
     requires(std::is_same_v<T, ExchangeQueryTradeConfig<true>> && !Optional)
   {
     if (other.minPriceUpdateDuration) {
@@ -66,7 +66,7 @@ struct ExchangeQueryTradeConfig {
 template <bool Optional>
 struct ExchangeQueryLogLevelsConfig {
   template <class T>
-  void mergeWith(const T &other)
+  void mergeWith(const T& other)
     requires(std::is_same_v<T, ExchangeQueryLogLevelsConfig<true>> && !Optional)
   {
     if (other.requestsCall) {
@@ -94,7 +94,7 @@ namespace details {
 template <bool Optional>
 struct ExchangeQueryConfig {
   template <class T, std::enable_if_t<std::is_same_v<T, ExchangeQueryConfig<true>> && !Optional, bool> = true>
-  void mergeWith(T &other) {
+  void mergeWith(T& other) {
     if (other.http) {
       http.mergeWith(*other.http);
     }

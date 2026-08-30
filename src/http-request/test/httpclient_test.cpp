@@ -9,8 +9,8 @@
 
 #include "cct_exception.hpp"
 #include "cct_string.hpp"
-#include "httprequestoptions.hpp"
 #include "httppostdata.hpp"
+#include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "permanentrequestoptions.hpp"
 #include "proxy.hpp"
@@ -30,12 +30,10 @@ constexpr std::string_view kXmlBody =
 // Keeps this test hermetic - no dependency on the availability of an external service.
 aeronet::SingleHttpServer CreateTestServer() {
   aeronet::Router router;
-  router.setPath(aeronet::http::Method::GET, "/json", [](const aeronet::HttpRequest& req) {
-    return req.makeResponse(kJsonBody, "application/json");
-  });
-  router.setPath(aeronet::http::Method::GET, "/xml", [](const aeronet::HttpRequest& req) {
-    return req.makeResponse(kXmlBody, "application/xml");
-  });
+  router.setPath(aeronet::http::Method::GET, "/json",
+                 [](const aeronet::HttpRequestView& req) { return req.makeResponse(kJsonBody, "application/json"); });
+  router.setPath(aeronet::http::Method::GET, "/xml",
+                 [](const aeronet::HttpRequestView& req) { return req.makeResponse(kXmlBody, "application/xml"); });
   return aeronet::SingleHttpServer(aeronet::HttpServerConfig{}, std::move(router));
 }
 
@@ -105,7 +103,7 @@ class TestOverrideQueryResponses : public ::testing::Test {
   HttpRequestOptions param1OptsGet{HttpRequestType::kGet, HttpPostData{{"param1", "v"}}};
   HttpRequestOptions param1OptsPost{HttpRequestType::kPost, HttpPostData{{"param1", "v"}}};
 
-  AbstractMetricGateway *pAbstractMetricGateway = nullptr;
+  AbstractMetricGateway* pAbstractMetricGateway = nullptr;
   settings::RunMode runMode = settings::RunMode::kQueryResponseOverriden;
   HttpClient handle{kTestUrl, pAbstractMetricGateway, PermanentRequestOptions(), runMode};
 };

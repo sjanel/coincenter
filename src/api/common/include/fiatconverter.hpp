@@ -11,8 +11,8 @@
 #include "cct_string.hpp"
 #include "cct_type_traits.hpp"
 #include "cct_vector.hpp"
-#include "httpclient.hpp"
 #include "currencycode.hpp"
+#include "httpclient.hpp"
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "reader.hpp"
@@ -41,14 +41,14 @@ class FiatConverter : public CacheFileUpdatorInterface {
  public:
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
-  FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency);
+  FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency);
 
   /// Creates a FiatConverter able to perform live queries to free converter api.
   /// @param ratesUpdateFrequency the minimum time needed between two currency rates updates
   /// @param fiatsRatesCacheReader the reader from which to load the initial rates conversion cache
   /// @param thirdPartySecretReader the reader from which to load the third party secret
-  FiatConverter(const CoincenterInfo &coincenterInfo, Duration ratesUpdateFrequency,
-                const Reader &fiatsRatesCacheReader, const Reader &thirdPartySecretReader);
+  FiatConverter(const CoincenterInfo& coincenterInfo, Duration ratesUpdateFrequency,
+                const Reader& fiatsRatesCacheReader, const Reader& thirdPartySecretReader);
 
   std::optional<double> convert(double amount, CurrencyCode from, CurrencyCode to);
 
@@ -76,7 +76,7 @@ class FiatConverter : public CacheFileUpdatorInterface {
     string freecurrencyconverter;
   };
 
-  static ThirdPartySecret LoadCurrencyConverterAPIKey(const Reader &thirdPartySecretReader);
+  static ThirdPartySecret LoadCurrencyConverterAPIKey(const Reader& thirdPartySecretReader);
 
   std::optional<double> queryCurrencyRate(Market market);
 

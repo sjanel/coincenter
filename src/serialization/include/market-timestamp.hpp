@@ -11,7 +11,7 @@ struct MarketTimestamp {
   Market market;
   TimePoint timePoint;
 
-  std::strong_ordering operator<=>(const MarketTimestamp &) const noexcept = default;
+  std::strong_ordering operator<=>(const MarketTimestamp&) const noexcept = default;
 };
 
 }  // namespace cct

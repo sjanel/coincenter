@@ -17,7 +17,7 @@ namespace cct {
 namespace {
 using namespace std::chrono_literals;
 
-int SlowDouble(const int &val) {
+int SlowDouble(const int& val) {
   if (val == 42) {
     throw std::invalid_argument("42 is not the answer to the ultimate question of life");
   }
@@ -25,7 +25,7 @@ int SlowDouble(const int &val) {
   return val * 2;
 }
 
-int SlowAdd(const int &lhs, const int &rhs) {
+int SlowAdd(const int& lhs, const int& rhs) {
   std::this_thread::sleep_for(10ms);
   return lhs + rhs;
 }
@@ -33,17 +33,17 @@ int SlowAdd(const int &lhs, const int &rhs) {
 struct NonCopyable {
   NonCopyable(int value = 0) : val(value) {}
 
-  NonCopyable(const NonCopyable &) = delete;
-  NonCopyable(NonCopyable &&) = default;
-  NonCopyable &operator=(const NonCopyable &) = delete;
-  NonCopyable &operator=(NonCopyable &&) = default;
+  NonCopyable(const NonCopyable&) = delete;
+  NonCopyable(NonCopyable&&) = default;
+  NonCopyable& operator=(const NonCopyable&) = delete;
+  NonCopyable& operator=(NonCopyable&&) = default;
 
   ~NonCopyable() = default;
 
   int val;
 };
 
-int SlowDoubleNonCopyable(const NonCopyable &val) {
+int SlowDoubleNonCopyable(const NonCopyable& val) {
   std::this_thread::sleep_for(10ms);
   return val.val * 2;
 }

@@ -68,13 +68,13 @@ class Market {
   /// Tells whether this market trades given currency code.
   bool canTrade(CurrencyCode cur) const { return cur == base() || cur == quote(); }
 
-  constexpr auto operator<=>(const Market &) const noexcept = default;
+  constexpr auto operator<=>(const Market&) const noexcept = default;
 
   string str() const { return assetsPairStrUpper('-'); }
 
   Type type() const noexcept { return static_cast<Type>(_assets[0].getAdditionalBits()); }
 
-  friend std::ostream &operator<<(std::ostream &os, const Market &mk);
+  friend std::ostream& operator<<(std::ostream& os, const Market& mk);
 
   /// Returns a string representing this Market in lower case
   string assetsPairStrLower(char sep = '\0') const {
@@ -88,7 +88,7 @@ class Market {
 
   /// Append market string representation to given string.
   template <class StringT>
-  void appendStrTo(StringT &str,
+  void appendStrTo(StringT& str,
                    MarketBase::StringOutputConfig stringOutputConfig = MarketBase::StringOutputConfig{}) const {
     const auto len = strLen(stringOutputConfig.currencyCodeSep != '\0');
     str.append(len, '\0');
@@ -133,7 +133,7 @@ class Market {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<::cct::Market> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -143,7 +143,7 @@ struct fmt::formatter<::cct::Market> {
   }
 
   template <typename FormatContext>
-  auto format(const ::cct::Market &mk, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const ::cct::Market& mk, FormatContext& ctx) const -> decltype(ctx.out()) {
     return fmt::format_to(ctx.out(), "{}-{}", mk.base(), mk.quote());
   }
 };
@@ -152,7 +152,7 @@ struct fmt::formatter<::cct::Market> {
 namespace std {
 template <>
 struct hash<::cct::Market> {
-  auto operator()(const ::cct::Market &mk) const {
+  auto operator()(const ::cct::Market& mk) const {
     return ::cct::HashCombine(hash<::cct::CurrencyCode>()(mk.base()), hash<::cct::CurrencyCode>()(mk.quote()));
   }
 };
@@ -162,7 +162,7 @@ namespace glz {
 template <>
 struct from<JSON, ::cct::Market> {
   template <auto Opts, class It, class End>
-  static void op(auto &&value, is_context auto &&, It &&it, End &&end) noexcept {
+  static void op(auto&& value, is_context auto&&, It&& it, End&& end) noexcept {
     // used as a value. As a key, the first quote will not be present.
     auto endIt = std::find(*it == '"' ? ++it : it, end, '"');
     value = ::cct::Market(std::string_view(it, endIt));
@@ -173,7 +173,7 @@ struct from<JSON, ::cct::Market> {
 template <>
 struct to<JSON, ::cct::Market> {
   template <auto Opts, is_context Ctx, class B, class IX>
-  static void op(auto &&value, Ctx &&, B &&b, IX &&ix) {
+  static void op(auto&& value, Ctx&&, B&& b, IX&& ix) {
     ::cct::details::ToStrLikeJson<Opts>(value, b, ix);
   }
 };

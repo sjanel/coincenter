@@ -26,7 +26,7 @@ class ExchangesOrchestrator {
  public:
   using UniquePublicSelectedExchanges = ExchangeRetriever::UniquePublicSelectedExchanges;
 
-  explicit ExchangesOrchestrator(const schema::RequestsConfig &requestsConfig, std::span<Exchange> exchangesSpan);
+  explicit ExchangesOrchestrator(const schema::RequestsConfig& requestsConfig, std::span<Exchange> exchangesSpan);
 
   ExchangeHealthCheckStatus healthCheck(ExchangeNameSpan exchangeNames);
 
@@ -36,24 +36,24 @@ class ExchangesOrchestrator {
                                                      CurrencyCode equiCurrencyCode, std::optional<int> depth);
 
   BalancePerExchange getBalance(ExchangeNameSpan privateExchangeNames,
-                                const BalanceOptions &balanceOptions = BalanceOptions());
+                                const BalanceOptions& balanceOptions = BalanceOptions());
 
   WalletPerExchange getDepositInfo(ExchangeNameSpan privateExchangeNames, CurrencyCode depositCurrency);
 
   ClosedOrdersPerExchange getClosedOrders(ExchangeNameSpan privateExchangeNames,
-                                          const OrdersConstraints &closedOrdersConstraints);
+                                          const OrdersConstraints& closedOrdersConstraints);
 
   OpenedOrdersPerExchange getOpenedOrders(ExchangeNameSpan privateExchangeNames,
-                                          const OrdersConstraints &openedOrdersConstraints);
+                                          const OrdersConstraints& openedOrdersConstraints);
 
   NbCancelledOrdersPerExchange cancelOrders(ExchangeNameSpan privateExchangeNames,
-                                            const OrdersConstraints &ordersConstraints);
+                                            const OrdersConstraints& ordersConstraints);
 
   DepositsPerExchange getRecentDeposits(ExchangeNameSpan privateExchangeNames,
-                                        const DepositsConstraints &depositsConstraints);
+                                        const DepositsConstraints& depositsConstraints);
 
   WithdrawsPerExchange getRecentWithdraws(ExchangeNameSpan privateExchangeNames,
-                                          const WithdrawsConstraints &withdrawsConstraints);
+                                          const WithdrawsConstraints& withdrawsConstraints);
 
   MonetaryAmountPerExchange getConversion(MonetaryAmount amount, CurrencyCode targetCurrencyCode,
                                           ExchangeNameEnumSpan exchangeNameEnums);
@@ -73,21 +73,21 @@ class ExchangesOrchestrator {
   UniquePublicSelectedExchanges getExchangesTradingMarket(Market mk, ExchangeNameSpan exchangeNames);
 
   TradeResultPerExchange trade(MonetaryAmount from, bool isPercentageTrade, CurrencyCode toCurrency,
-                               ExchangeNameSpan privateExchangeNames, const TradeOptions &tradeOptions);
+                               ExchangeNameSpan privateExchangeNames, const TradeOptions& tradeOptions);
 
   TradeResultPerExchange smartBuy(MonetaryAmount endAmount, ExchangeNameSpan privateExchangeNames,
-                                  const TradeOptions &tradeOptions);
+                                  const TradeOptions& tradeOptions);
 
   TradeResultPerExchange smartSell(MonetaryAmount startAmount, bool isPercentageTrade,
-                                   ExchangeNameSpan privateExchangeNames, const TradeOptions &tradeOptions);
+                                   ExchangeNameSpan privateExchangeNames, const TradeOptions& tradeOptions);
 
   TradedAmountsVectorWithFinalAmountPerExchange dustSweeper(ExchangeNameSpan privateExchangeNames,
                                                             CurrencyCode currencyCode);
 
   DeliveredWithdrawInfoWithExchanges withdraw(MonetaryAmount grossAmount, bool isPercentageWithdraw,
-                                              const ExchangeName &fromPrivateExchangeName,
-                                              const ExchangeName &toPrivateExchangeName,
-                                              const WithdrawOptions &withdrawOptions);
+                                              const ExchangeName& fromPrivateExchangeName,
+                                              const ExchangeName& toPrivateExchangeName,
+                                              const WithdrawOptions& withdrawOptions);
 
   MonetaryAmountByCurrencySetPerExchange getWithdrawFees(CurrencyCode currencyCode, ExchangeNameSpan exchangeNames);
 
@@ -102,12 +102,12 @@ class ExchangesOrchestrator {
 
   MarketTimestampSetsPerExchange pullAvailableMarketsForReplay(TimeWindow timeWindow, ExchangeNameSpan exchangeNames);
 
-  MarketTradeRangeStatsPerExchange traderConsumeRange(const ReplayOptions &replayOptions, TimeWindow subTimeWindow,
+  MarketTradeRangeStatsPerExchange traderConsumeRange(const ReplayOptions& replayOptions, TimeWindow subTimeWindow,
                                                       std::span<MarketTraderEngine> marketTraderEngines,
                                                       ExchangeNameEnumSpan exchangeNames);
 
   MarketTradingGlobalResultPerExchange getMarketTraderResultPerExchange(
-      std::span<MarketTraderEngine> marketTraderEngines, MarketTradeRangeStatsPerExchange &&tradeRangeStatsPerExchange,
+      std::span<MarketTraderEngine> marketTraderEngines, MarketTradeRangeStatsPerExchange&& tradeRangeStatsPerExchange,
       ExchangeNameEnumSpan exchangeNames);
 
  private:

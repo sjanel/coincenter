@@ -43,7 +43,7 @@ class OrderConstraintsBitmap {
 
   bool isOrderIdOnlyDependent() const { return _bmp == kIdConstrained; }
 
-  bool operator==(const OrderConstraintsBitmap &) const noexcept = default;
+  bool operator==(const OrderConstraintsBitmap&) const noexcept = default;
 
  private:
   uint8_t _bmp{};
@@ -56,7 +56,7 @@ class OrdersConstraints {
   /// Build OrdersConstraints based on given filtering information
   explicit OrdersConstraints(CurrencyCode cur1 = CurrencyCode(), CurrencyCode cur2 = CurrencyCode(),
                              Duration minAge = kUndefinedDuration, Duration maxAge = kUndefinedDuration,
-                             OrderIdSet &&ordersIdSet = OrderIdSet());
+                             OrderIdSet&& ordersIdSet = OrderIdSet());
 
   TimePoint placedBefore() const { return _placedBefore; }
   TimePoint placedAfter() const { return _placedAfter; }
@@ -96,7 +96,7 @@ class OrdersConstraints {
 
   bool validateId(std::string_view orderId) const { return !isOrderIdDefined() || _ordersIdSet.contains(orderId); }
 
-  const OrderIdSet &orderIdSet() const { return _ordersIdSet; }
+  const OrderIdSet& orderIdSet() const { return _ordersIdSet; }
 
   bool isOrderIdDefined() const { return !_ordersIdSet.empty(); }
 
@@ -111,7 +111,7 @@ class OrdersConstraints {
   bool isMarketOnlyDependent() const { return _orderConstraintsBitmap.isMarketOnlyDependent(); }
   bool isAtMostMarketDependent() const { return _orderConstraintsBitmap.isAtMostMarketOnlyDependent(); }
 
-  bool operator==(const OrdersConstraints &) const = default;
+  bool operator==(const OrdersConstraints&) const = default;
 
   using trivially_relocatable = is_trivially_relocatable<OrderIdSet>::type;
 
@@ -128,7 +128,7 @@ class OrdersConstraints {
 #ifndef CCT_DISABLE_SPDLOG
 template <>
 struct fmt::formatter<cct::OrdersConstraints> {
-  constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     const auto it = ctx.begin();
     const auto end = ctx.end();
     if (it != end && *it != '}') {
@@ -138,7 +138,7 @@ struct fmt::formatter<cct::OrdersConstraints> {
   }
 
   template <typename FormatContext>
-  auto format(const cct::OrdersConstraints &ordersConstraints, FormatContext &ctx) const -> decltype(ctx.out()) {
+  auto format(const cct::OrdersConstraints& ordersConstraints, FormatContext& ctx) const -> decltype(ctx.out()) {
     if (ordersConstraints.isCurDefined()) {
       ctx.out() = fmt::format_to(ctx.out(), "{}", ordersConstraints.cur1());
     } else {

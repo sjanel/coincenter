@@ -6,7 +6,7 @@
 namespace cct {
 namespace {
 
-MetricKeyPerRequestType DefineTypes(MetricKey &requestCountKey) {
+MetricKeyPerRequestType DefineTypes(MetricKey& requestCountKey) {
   MetricKeyPerRequestType ret;
   for (HttpRequestType requestType : kHttpRequestTypes) {
     requestCountKey.set("type", HttpRequestTypeToString(requestType));
