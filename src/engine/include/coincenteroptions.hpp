@@ -27,14 +27,14 @@ class CoincenterCmdLineOptions {
 
   bool isSmartTrade() const noexcept;
 
-  TradeOptions computeTradeOptions() const;
-  WithdrawOptions computeWithdrawOptions() const;
+  [[nodiscard]] TradeOptions computeTradeOptions() const;
+  [[nodiscard]] WithdrawOptions computeWithdrawOptions() const;
 
-  ReplayOptions computeReplayOptions(Duration dur) const;
+  [[nodiscard]] ReplayOptions computeReplayOptions(Duration dur) const;
 
-  std::string_view getDataDir() const { return dataDir.empty() ? SelectDefaultDataDir() : dataDir; }
+  [[nodiscard]] std::string_view getDataDir() const { return dataDir.empty() ? SelectDefaultDataDir() : dataDir; }
 
-  std::pair<std::string_view, CoincenterCommandType> getTradeArgStr() const;
+  [[nodiscard]] std::pair<std::string_view, CoincenterCommandType> getTradeArgStr() const;
 
   void mergeGlobalWith(const CoincenterCmdLineOptions& rhs);
 

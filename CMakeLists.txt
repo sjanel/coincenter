@@ -168,8 +168,8 @@ set(AERONET_ENABLE_ZLIB        ON  CACHE BOOL "" FORCE)  # gzip / deflate auto-d
 set(AERONET_ENABLE_ZLIBNG      ON  CACHE BOOL "" FORCE)  # use aeronet's bundled zlib-ng (faster, self-contained)
 set(AERONET_ENABLE_ZSTD        ON  CACHE BOOL "" FORCE)  # zstd auto-decompression (more efficient)
 set(AERONET_ENABLE_BROTLI      ON  CACHE BOOL "" FORCE)  # brotli auto-decompression (more efficient)
-set(AERONET_ENABLE_HTTP2       OFF CACHE BOOL "" FORCE)  # HTTP/1.1 is enough; fewer dependencies
-set(AERONET_ENABLE_WEBSOCKET   OFF CACHE BOOL "" FORCE)
+set(AERONET_ENABLE_HTTP2       ON CACHE BOOL "" FORCE)
+set(AERONET_ENABLE_WEBSOCKET   ON CACHE BOOL "" FORCE)
 set(AERONET_BUILD_TESTS        OFF CACHE BOOL "" FORCE)
 set(AERONET_BUILD_EXAMPLES     OFF CACHE BOOL "" FORCE)
 set(AERONET_BUILD_BENCHMARKS   OFF CACHE BOOL "" FORCE)

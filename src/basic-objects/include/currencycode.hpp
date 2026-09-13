@@ -30,16 +30,17 @@ struct CurrencyCodeBase {
   static constexpr uint64_t kNbDecimals4Mask = (1ULL << kNbBitsNbDecimals) - 1ULL;
   static constexpr uint64_t kNbDecimals6Mask = (1ULL << 6ULL) - 1ULL;
 
-  static constexpr uint64_t kFirstCharMask = ~((1ULL << (kNbBitsNbDecimals + (kMaxLen - 1U) * kNbBitsChar)) - 1ULL);
+  static constexpr uint64_t kFirstCharMask = ~((1ULL << (kNbBitsNbDecimals + ((kMaxLen - 1U) * kNbBitsChar))) - 1ULL);
 
-  static constexpr uint64_t NCharMask(uint64_t n) noexcept {
+  // NOLINTNEXTLINE(misc-no-recursion) - it's a compile time computation only.
+  static consteval uint64_t NCharMask(uint64_t n) noexcept {
     if (n == 1) {
       return kFirstCharMask;
     }
     return NCharMask(n - 1) + (kFirstCharMask >> (kNbBitsChar * (n - 1)));
   }
 
-  static constexpr auto ComputeAllCharMasks() {
+  static consteval auto ComputeAllCharMasks() {
     std::array<uint64_t, kMaxLen + 1U> allCharMasks;
     allCharMasks[0] = 0;
     for (std::remove_const_t<decltype(kMaxLen)> sz = 1; sz <= kMaxLen; ++sz) {
@@ -56,7 +57,7 @@ struct CurrencyCodeBase {
   static constexpr char kLastAuthorizedLetter = 95;   // '_'
 
   static constexpr char CharAt(uint64_t data, uint32_t pos) noexcept {
-    return static_cast<char>((data >> (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - pos - 1U))) &
+    return static_cast<char>((data >> (kNbBitsNbDecimals + (kNbBitsChar * (kMaxLen - pos - 1U)))) &
                              ((1ULL << kNbBitsChar) - 1ULL)) +
            kFirstAuthorizedLetter;
   }
@@ -74,7 +75,7 @@ struct CurrencyCodeBase {
 
   static constexpr uint64_t GetCharAtPosBmp(char ch, uint32_t charPos) {
     return static_cast<uint64_t>(ch - kFirstAuthorizedLetter)
-           << (kNbBitsNbDecimals + kNbBitsChar * (kMaxLen - 1U - charPos));
+           << (kNbBitsNbDecimals + (kNbBitsChar * (kMaxLen - 1U - charPos)));
   }
 
   static constexpr uint64_t DecimalsMask(bool isLongCurrencyCode) noexcept {
