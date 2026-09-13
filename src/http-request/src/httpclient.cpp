@@ -128,7 +128,7 @@ HttpClient::HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway* pMetr
 
 std::string_view HttpClient::query(std::string_view endpoint, const HttpRequestOptions& opts) {
   const HttpPostData& postData = opts.postData();
-  const bool queryResponseOverrideMode = !_client;
+  const bool queryResponseOverrideMode = _client == nullptr;
   const bool appendParametersInQueryStr =
       !postData.empty() && (opts.requestType() != HttpRequestType::kPost || queryResponseOverrideMode);
 

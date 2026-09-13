@@ -55,7 +55,8 @@ class Coincenter {
 
   /// Query market data (order books and last trades).
   /// This method is especially useful for serialization and metric exports.
-  MarketDataPerExchange queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchangePos);
+  MarketDataPerExchange queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchangePos,
+                                                   std::optional<int> optDepth);
 
   /// Retrieve the last 24h traded volume for exchanges supporting given market.
   MonetaryAmountPerExchange getLast24hTradedVolumePerExchange(Market mk, ExchangeNameSpan exchangeNames);

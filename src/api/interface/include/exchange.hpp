@@ -104,11 +104,11 @@ class Exchange final : public CacheFileUpdatorInterface {
   /// Retrieve the last price of given market.
   MonetaryAmount queryLastPrice(Market mk) { return apiPublic().queryLastPrice(mk); }
 
-  bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const;
+  [[nodiscard]] bool canWithdraw(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const;
 
-  bool canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const;
+  [[nodiscard]] bool canDeposit(CurrencyCode currencyCode, const CurrencyExchangeFlatSet& currencyExchangeSet) const;
 
-  bool matches(const ExchangeName& exchangeName) const {
+  [[nodiscard]] bool matches(const ExchangeName& exchangeName) const {
     return name() == exchangeName.name() && (!exchangeName.isKeyNameDefined() || keyName() == exchangeName.keyName());
   }
 

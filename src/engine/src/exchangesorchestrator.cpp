@@ -955,7 +955,8 @@ MonetaryAmountPerExchange ExchangesOrchestrator::getLastPricePerExchange(Market 
 }
 
 MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(
-    std::span<const Market> marketPerPublicExchange, std::span<const ExchangeNameEnum> exchangeNameEnums) {
+    std::span<const Market> marketPerPublicExchange, std::span<const ExchangeNameEnum> exchangeNameEnums,
+    std::optional<int> optDepth) {
   UniquePublicSelectedExchanges selectedExchanges = _exchangeRetriever.selectOneAccount(exchangeNameEnums);
 
   std::array<bool, kNbSupportedExchanges> isMarketTradable;
@@ -968,20 +969,23 @@ MarketDataPerExchange ExchangesOrchestrator::getMarketDataPerExchange(
 
   FilterVector(selectedExchanges, isMarketTradable);
 
+  const auto actualDepth = optDepth.value_or(api::ExchangePublic::kDefaultDepth);
+
   MarketDataPerExchange ret(selectedExchanges.size());
-  _threadPool.parallelTransform(selectedExchanges, ret.begin(), [&marketPerPublicExchange](Exchange* exchange) {
-    // Call order book and last trades sequentially for this exchange
-    Market market = marketPerPublicExchange[exchange->publicExchangePos()];
+  _threadPool.parallelTransform(
+      selectedExchanges, ret.begin(), [&marketPerPublicExchange, actualDepth](Exchange* exchange) {
+        // Call order book and last trades sequentially for this exchange
+        Market market = marketPerPublicExchange[exchange->publicExchangePos()];
 
-    // Use local variables to ensure deterministic order of api calls (orderbook then last trades).
-    // The order of api calls itself is not important, but we want to keep the same order for repetitive calls.
-    // Indeed in C++, the order of parameter evaluation is undefined, and we don't want that it changes between two
-    // calls even if it's very unlikely.
-    auto orderBook = exchange->getOrderBook(market);
-    auto lastTrades = exchange->getLastTrades(market);
+        // Use local variables to ensure deterministic order of api calls (orderbook then last trades).
+        // The order of api calls itself is not important, but we want to keep the same order for repetitive calls.
+        // Indeed in C++, the order of parameter evaluation is undefined, and we don't want that it changes between two
+        // calls even if it's very unlikely.
+        auto orderBook = exchange->getOrderBook(market, actualDepth);
+        auto lastTrades = exchange->getLastTrades(market, actualDepth);
 
-    return std::make_pair(exchange, std::make_pair(std::move(orderBook), std::move(lastTrades)));
-  });
+        return std::make_pair(exchange, std::make_pair(std::move(orderBook), std::move(lastTrades)));
+      });
   return ret;
 }
 

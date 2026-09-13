@@ -73,7 +73,8 @@ MarketOrderBookConversionRates Coincenter::getMarketOrderBooks(Market mk, Exchan
   return ret;
 }
 
-MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchangePos) {
+MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Market> marketPerPublicExchangePos,
+                                                             std::optional<int> optDepth) {
   ExchangeNameEnumVector exchangeNameEnums;
 
   int exchangePos{};
@@ -85,7 +86,7 @@ MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Mar
   }
 
   const auto marketDataPerExchange =
-      _exchangesOrchestrator.getMarketDataPerExchange(marketPerPublicExchangePos, exchangeNameEnums);
+      _exchangesOrchestrator.getMarketDataPerExchange(marketPerPublicExchangePos, exchangeNameEnums, optDepth);
 
   // Transform data structures to export metrics input format
   MarketOrderBookConversionRates marketOrderBookConversionRates(marketDataPerExchange.size());

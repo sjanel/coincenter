@@ -314,7 +314,7 @@ TransferableCommandResultVector CoincenterCommandsProcessor::processGroupedComma
         }
       }
       // No return value here, this command is made only for storing purposes.
-      _coincenter.queryMarketDataPerExchange(marketPerPublicExchange);
+      _coincenter.queryMarketDataPerExchange(marketPerPublicExchange, firstCmd.optDepth());
       break;
     }
     case CoincenterCommandType::Replay: {

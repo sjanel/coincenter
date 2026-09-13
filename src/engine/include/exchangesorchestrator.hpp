@@ -98,7 +98,8 @@ class ExchangesOrchestrator {
   MonetaryAmountPerExchange getLastPricePerExchange(Market mk, ExchangeNameSpan exchangeNames);
 
   MarketDataPerExchange getMarketDataPerExchange(std::span<const Market> marketPerPublicExchange,
-                                                 std::span<const ExchangeNameEnum> exchangeNameEnums);
+                                                 std::span<const ExchangeNameEnum> exchangeNameEnums,
+                                                 std::optional<int> optDepth);
 
   MarketTimestampSetsPerExchange pullAvailableMarketsForReplay(TimeWindow timeWindow, ExchangeNameSpan exchangeNames);
 

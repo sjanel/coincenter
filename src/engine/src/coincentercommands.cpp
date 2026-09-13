@@ -220,9 +220,12 @@ void CoincenterCommands::addOption(const CoincenterCmdLineOptions& cmdLineOption
   if (!cmdLineOptions.marketData.empty()) {
     optionParser = StringOptionParser(cmdLineOptions.marketData);
 
-    _commands.emplace_back(CoincenterCommandType::MarketData)
-        .setMarket(optionParser.parseMarket())
-        .setExchangeNames(optionParser.parseExchanges());
+    auto& cmd = _commands.emplace_back(CoincenterCommandType::MarketData)
+                    .setMarket(optionParser.parseMarket())
+                    .setExchangeNames(optionParser.parseExchanges());
+    if (cmdLineOptions.depth != CoincenterCmdLineOptions::kUndefinedDepth) {
+      cmd.setDepth(cmdLineOptions.depth);
+    }
   }
 
   if (cmdLineOptions.replay) {
