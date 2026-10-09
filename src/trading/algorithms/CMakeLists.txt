@@ -8,3 +8,10 @@ target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_tech)
 
 target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_trading-common)
 target_link_libraries(coincenter_trading-algorithms PUBLIC coincenter_trading-indicators)
+
+add_unit_test(
+  market-trader-suite_test
+  test/market-trader-suite_test.cpp
+  LIBRARIES
+  coincenter_trading-algorithms
+)
