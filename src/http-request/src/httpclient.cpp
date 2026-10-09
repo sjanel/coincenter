@@ -3,18 +3,19 @@
 #include <aeronet/http-client-config.hpp>
 #include <aeronet/http-client-error.hpp>
 #include <aeronet/http-client.hpp>
+#include <aeronet/http-constants.hpp>
 #include <aeronet/http-header.hpp>
 #include <aeronet/http-method.hpp>
 #include <aeronet/http-request.hpp>
 #include <aeronet/http-response.hpp>
+#include <aeronet/lower-ascii-key.hpp>
 #include <aeronet/version.hpp>
 #include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <map>
-#include <string>
+#include <memory>
 #include <string_view>
 #include <thread>
 #include <utility>
@@ -34,6 +35,7 @@
 #include "permanentrequestoptions.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
+#include "toupperlower.hpp"
 #include "unreachable.hpp"
 
 namespace cct {
@@ -57,18 +59,11 @@ aeronet::http::Method ToAeronetMethod(HttpRequestType requestType) {
   }
 }
 
-bool IsContentTypeHeader(std::string_view key) {
-  static constexpr std::string_view kContentType = "content-type";
-  return std::ranges::equal(key, kContentType, [](char lhs, char rhs) {
-    return static_cast<char>(std::tolower(static_cast<unsigned char>(lhs))) == rhs;
-  });
-}
-
 }  // namespace
 
 string GetHttpClientVersionInfo() {
   // Full multi-line breakdown: aeronet + glaze + TLS + logging + compression versions.
-  return string(aeronet::fullVersionWithRuntime());
+  return {aeronet::fullVersionWithRuntime()};
 }
 
 HttpClient::HttpClient() noexcept = default;
@@ -115,7 +110,7 @@ HttpClient::HttpClient(BestURLPicker bestURLPicker, AbstractMetricGateway* pMetr
     config.requestTimeout = std::chrono::duration_cast<std::chrono::milliseconds>(permanentRequestOptions.timeout());
   }
 
-  _client = new aeronet::HttpClient(std::move(config));
+  _client = std::make_unique<aeronet::HttpClient>(std::move(config));
 
   log::debug("Initialize HttpClient for {} with {} as minimum duration between queries",
              _bestURLPicker.getNextBaseURL(), DurationToString(_minDurationBetweenQueries));
@@ -163,13 +158,18 @@ std::string_view HttpClient::query(std::string_view endpoint, const HttpRequestO
   }
 
   // Build the request. Content-Type must be routed through body() (aeronet rejects it as a raw header).
+  // aeronet requires lower-case header names (they are case-insensitive in HTTP/1.1, and lower-case in HTTP/2).
   auto req = _client->makeRequest(ToAeronetMethod(opts.requestType()), modifiedURL);
   std::string_view contentType;
+  string lowerCaseHeaderName;
   for (const auto& header : opts.httpHeaders()) {
-    if (IsContentTypeHeader(header.key())) {
+    const std::string_view headerName = header.key();
+    lowerCaseHeaderName.resize(headerName.size());
+    std::ranges::transform(headerName, lowerCaseHeaderName.begin(), [](char ch) { return tolower(ch); });
+    if (lowerCaseHeaderName == aeronet::http::ContentType.get()) {
       contentType = header.val();
     } else {
-      req.headerAddLine(header.key(), header.val());
+      req.headerAddLine(aeronet::LowerAsciiKey(std::string_view(lowerCaseHeaderName)), header.val());
     }
   }
 
@@ -306,28 +306,10 @@ void HttpClient::setOverridenQueryResponses(const std::map<string, string>& quer
   _queryData = string(flatQueryResponses.str());
 }
 
-void HttpClient::swap(HttpClient& rhs) noexcept {
-  using std::swap;
+HttpClient::HttpClient(HttpClient&& rhs) noexcept = default;
 
-  swap(_client, rhs._client);
-  swap(_pMetricGateway, rhs._pMetricGateway);
-  swap(_minDurationBetweenQueries, rhs._minDurationBetweenQueries);
-  swap(_lastQueryTime, rhs._lastQueryTime);
-  swap(_bestURLPicker, rhs._bestURLPicker);
-  _queryData.swap(rhs._queryData);
-  swap(_requestCallLogLevel, rhs._requestCallLogLevel);
-  swap(_requestAnswerLogLevel, rhs._requestAnswerLogLevel);
-  swap(_nbMaxRetries, rhs._nbMaxRetries);
-  swap(_tooManyErrorsPolicy, rhs._tooManyErrorsPolicy);
-}
+HttpClient& HttpClient::operator=(HttpClient&& rhs) noexcept = default;
 
-HttpClient::HttpClient(HttpClient&& rhs) noexcept { swap(rhs); }
-
-HttpClient& HttpClient::operator=(HttpClient&& rhs) noexcept {
-  swap(rhs);
-  return *this;
-}
-
-HttpClient::~HttpClient() { delete _client; }
+HttpClient::~HttpClient() = default;
 
 }  // namespace cct

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string_view>
-#include <type_traits>
 
 #include "besturlpicker.hpp"
 #include "cct_log.hpp"
@@ -78,18 +78,11 @@ class HttpClient {
   /// complexity in a flat key value string.
   void setOverridenQueryResponses(const std::map<string, string>& queryResponsesMap);
 
-  void swap(HttpClient& rhs) noexcept;
-
-  /// HttpClient is not trivially relocatable: the underlying aeronet::HttpClient owns an event loop
-  /// and reusable buffers referenced by internal state.
-  using trivially_relocatable = std::false_type;
-
  private:
-  // Owning raw pointer to the underlying aeronet HTTP client (deleted in the destructor). A raw pointer
-  // behind a forward declaration is used - rather than a unique_ptr - so that clients including this
-  // header (and the unit-test mocks that redefine this class' members) do not need the complete aeronet
-  // type. A null pointer means the object runs in query-response override mode (unit tests).
-  aeronet::HttpClient* _client = nullptr;
+  // The underlying aeronet HTTP client, behind a forward declaration so that clients including this header
+  // do not need the complete aeronet type (special members are defined out of line for this reason).
+  // A null pointer means the object runs in query-response override mode (unit tests).
+  std::unique_ptr<aeronet::HttpClient> _client;
   AbstractMetricGateway* _pMetricGateway = nullptr;  // non-owning pointer
   Duration _minDurationBetweenQueries{};
   TimePoint _lastQueryTime;

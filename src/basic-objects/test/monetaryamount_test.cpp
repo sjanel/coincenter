@@ -882,7 +882,7 @@ TEST(MonetaryAmountTest, JsonDeserializationValue) {
   Foo foo;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts_ex{.raw_string = true}>(foo, R"({"amount":"15.5 DOGE"})");
+  auto ec = json::read<json::opts_ex{{}, /*raw_string*/ true}>(foo, R"({"amount":"15.5 DOGE"})");
 
   ASSERT_FALSE(ec);
 
@@ -894,7 +894,7 @@ TEST(MonetaryAmountTest, JsonSerializationKey) {
 
   string buffer;
   auto res =
-      json::write<json::opts_ex{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
+      json::write<json::opts_ex{{}, /*raw_string*/ true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -910,7 +910,7 @@ TEST(MonetaryAmountTest, JsonSerializationVector) {
 
   string buffer;
   auto res =
-      json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+      json::write<json::opts_ex{{}, /*raw_string*/ true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 

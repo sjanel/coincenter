@@ -192,9 +192,10 @@ string DurationToString(Duration dur, int nbSignificantUnits) {
       ret.push_back('-');
       dur = -dur;
     }
-    std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &ret](const auto& unitDuration) {
+    // find_if is only used to stop at the first unit returning true
+    static_cast<void>(std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &ret](const auto& unitDuration) {
       return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, ret);
-    });
+    }));
   }
 
   return ret;
@@ -216,9 +217,11 @@ std::span<char> DurationToBuffer(Duration dur, std::span<char> buffer, int nbSig
     dur = -dur;
   }
 
-  std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &buffer](const auto& unitDuration) {
-    return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, buffer);
-  });
+  // find_if is only used to stop at the first unit returning true
+  static_cast<void>(
+      std::ranges::find_if(kDurationUnits, [&dur, &nbSignificantUnits, &buffer](const auto& unitDuration) {
+        return AdjustWithUnit(unitDuration, dur, nbSignificantUnits, buffer);
+      }));
 
   return {begBuf, buffer.data()};
 }

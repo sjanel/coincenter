@@ -22,7 +22,7 @@ function (target_set_coincenter_options name)
     if(MSVC)
       target_compile_options(${name} PRIVATE /W1)
     else()
-      target_compile_options(${name} PRIVATE -Wdisabled-optimization -Winline)
+      target_compile_options(${name} PRIVATE -Wdisabled-optimization)
     endif()
   endif()
 

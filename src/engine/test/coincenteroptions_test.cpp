@@ -83,13 +83,13 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsDefault) {
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeTypePolicyInvalid) {
   opts.forceMultiTrade = true;
   opts.forceSingleTrade = true;
-  EXPECT_THROW(opts.computeTradeOptions(), invalid_argument);
+  EXPECT_THROW(static_cast<void>(opts.computeTradeOptions()), invalid_argument);
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeTimeoutActionInvalid) {
   opts.tradeTimeoutCancel = true;
   opts.tradeTimeoutMatch = true;
-  EXPECT_THROW(opts.computeTradeOptions(), invalid_argument);
+  EXPECT_THROW(static_cast<void>(opts.computeTradeOptions()), invalid_argument);
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradeStrategy) {
@@ -104,7 +104,7 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradeStrategy) {
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradeInvalidTradePrice) {
   opts.tradePrice = "4.5";
   opts.sellAll = "USDT";
-  EXPECT_THROW(opts.computeTradeOptions(), invalid_argument);
+  EXPECT_THROW(static_cast<void>(opts.computeTradeOptions()), invalid_argument);
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeOptionsTradePriceNeutral) {
@@ -127,7 +127,7 @@ TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrDefault) { EXPECT_TRUE(op
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrInvalid) {
   opts.tradeStrategy = "nibble";
   opts.tradePrice = "2";
-  EXPECT_THROW(opts.getTradeArgStr(), invalid_argument);
+  EXPECT_THROW(static_cast<void>(opts.getTradeArgStr()), invalid_argument);
 }
 
 TEST_F(CoincenterCmdLineOptionsTest, ComputeTradeArgStrTrade) {

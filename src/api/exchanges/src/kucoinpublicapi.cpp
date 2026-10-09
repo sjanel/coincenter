@@ -254,6 +254,11 @@ MarketOrderBookMap KucoinPublic::AllOrderBooksFunc::operator()(int depth) {
       log::debug("Discarding {} because of invalid bid price {}", mk, bidPri);
       continue;
     }
+    // Kucoin ticker data is sometimes inconsistent for some markets, with an ask price lower than or equal to the bid
+    if (askPri <= bidPri) {
+      log::debug("Discarding {} because of ask price {} not larger than bid price {}", mk, askPri, bidPri);
+      continue;
+    }
     // There is no volume in the response, we need to emulate it, based on the 24h volume
     MonetaryAmount dayVolume(ticker.vol.value_or(MonetaryAmount()), mk.base());
     if (dayVolume == 0) {
