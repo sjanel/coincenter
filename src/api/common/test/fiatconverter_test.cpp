@@ -18,6 +18,12 @@
 #include "timedef.hpp"
 #include "write-json.hpp"
 
+namespace aeronet {
+
+class HttpClient {};
+
+}  // namespace aeronet
+
 namespace cct {
 
 namespace {
@@ -49,6 +55,12 @@ HttpClient::HttpClient([[maybe_unused]] BestURLPicker bestURLPicker,
                        [[maybe_unused]] const PermanentRequestOptions& permanentHttpRequestOptions,
                        [[maybe_unused]] settings::RunMode runMode)
     : _bestURLPicker(kSomeFakeURL) {}
+
+HttpClient::HttpClient(HttpClient&& rhs) noexcept = default;
+
+HttpClient& HttpClient::operator=(HttpClient&& rhs) noexcept = default;
+
+HttpClient::~HttpClient() = default;  // NOLINT
 
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 std::string_view HttpClient::query([[maybe_unused]] std::string_view endpoint, const HttpRequestOptions& opts) {
@@ -103,8 +115,6 @@ std::string_view HttpClient::query([[maybe_unused]] std::string_view endpoint, c
 
   return _queryData;
 }
-
-HttpClient::~HttpClient() = default;  // NOLINT
 
 class FiatConverterTest : public ::testing::Test {
  protected:

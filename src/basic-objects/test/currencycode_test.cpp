@@ -240,7 +240,7 @@ TEST(CurrencyCodeTest, JsonSerializationValue) {
 
   string buffer;
   auto res =
-      json::write<json::opts_ex{.raw_string = true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
+      json::write<json::opts_ex{{}, /*raw_string*/ true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -256,7 +256,7 @@ TEST(CurrencyCodeTest, JsonSerializationVector) {
 
   string buffer;
   auto res =
-      json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+      json::write<json::opts_ex{{}, /*raw_string*/ true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -268,7 +268,7 @@ TEST(CurrencyCodeTest, JsonSerializationKey) {
 
   string buffer;
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto res = json::write<json::opts_ex{.raw_string = true}>(map, buffer);
+  auto res = json::write<json::opts_ex{{}, /*raw_string*/ true}>(map, buffer);
 
   EXPECT_FALSE(res);
 
@@ -279,7 +279,7 @@ TEST(CurrencyCodeTest, JsonDeserialization) {
   Foo foo;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts_ex{.raw_string = true}>(foo, R"({"currencyCode":"DOGE"})");
+  auto ec = json::read<json::opts_ex{{}, /*raw_string*/ true}>(foo, R"({"currencyCode":"DOGE"})");
 
   ASSERT_FALSE(ec);
 
@@ -290,7 +290,7 @@ TEST(CurrencyCodeTest, JsonDeserializationVector) {
   vector<CurrencyCode> data;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts_ex{.raw_string = true}>(data, R"(["EUR","DOGE"])");
+  auto ec = json::read<json::opts_ex{{}, /*raw_string*/ true}>(data, R"(["EUR","DOGE"])");
 
   ASSERT_FALSE(ec);
 

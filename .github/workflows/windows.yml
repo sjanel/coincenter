@@ -13,19 +13,24 @@ jobs:
     strategy:
       matrix:
         buildmode: [Debug]
-        generator: [Visual Studio 17 2022]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
+      # No explicit generator: CMake picks the most recent Visual Studio installed on the runner.
+      # vcpkg DLLs are not copied next to each executable (VCPKG_APPLOCAL_DEPS=OFF): executables built in parallel in the
+      # same directory make these copies fail ('file being used by another process'). They are found from PATH instead.
       - name: Configure CMake with vcpkg
-        run: cmake -S . -B build -G "${{matrix.generator}}"
+        run: cmake -S . -B build -A x64 -DVCPKG_APPLOCAL_DEPS=OFF
         env:
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
           CMAKE_TOOLCHAIN_FILE: "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
         run: cmake --build build --config ${{matrix.buildmode}} --parallel 4
+
+      - name: Add vcpkg DLLs directory to PATH
+        run: echo "${{github.workspace}}\build\vcpkg_installed\x64-windows\${{ matrix.buildmode == 'Debug' && 'debug\bin' || 'bin' }}" >> $env:GITHUB_PATH
 
       - name: Tests
         working-directory: ${{github.workspace}}/build

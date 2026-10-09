@@ -17,22 +17,22 @@ class PermanentRequestOptions {
 
   PermanentRequestOptions() noexcept = default;
 
-  const auto& getUserAgent() const { return _userAgent; }
+  [[nodiscard]] const auto& getUserAgent() const { return _userAgent; }
 
-  const auto& getAcceptedEncoding() const { return _acceptedEncoding; }
+  [[nodiscard]] const auto& getAcceptedEncoding() const { return _acceptedEncoding; }
 
-  auto minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
+  [[nodiscard]] auto minDurationBetweenQueries() const { return _minDurationBetweenQueries; }
 
-  auto followLocation() const { return _followLocation; }
+  [[nodiscard]] auto followLocation() const { return _followLocation; }
 
-  auto requestCallLogLevel() const { return _requestCallLogLevel; }
-  auto requestAnswerLogLevel() const { return _requestAnswerLogLevel; }
+  [[nodiscard]] auto requestCallLogLevel() const { return _requestCallLogLevel; }
+  [[nodiscard]] auto requestAnswerLogLevel() const { return _requestAnswerLogLevel; }
 
-  auto tooManyErrorsPolicy() const { return _tooManyErrorsPolicy; }
+  [[nodiscard]] auto tooManyErrorsPolicy() const { return _tooManyErrorsPolicy; }
 
-  auto nbMaxRetries() const { return _nbMaxRetries; }
+  [[nodiscard]] auto nbMaxRetries() const { return _nbMaxRetries; }
 
-  auto timeout() const { return _timeout; }
+  [[nodiscard]] auto timeout() const { return _timeout; }
 
   class Builder {
    public:

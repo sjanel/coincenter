@@ -14,34 +14,27 @@ jobs:
       matrix:
         buildmode: [Debug]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Select LLVM 20 toolchain and SDK
+      # Same toolchain as aeronet macOS CI: GCC 15 (libstdc++), as libc++ is not complete enough yet for aeronet
+      # (std::chrono::clock_cast for instance), with an Xcode SDK supported by GCC 15.
+      - name: Select GCC 15 toolchain and Xcode 26.2 SDK
         run: |
-          set -euo pipefail
-          LLVM_PREFIX="$(brew --prefix llvm@20)"
-          SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
-          DEPLOYMENT_TARGET="13.0"
-          echo "Using Homebrew LLVM prefix: ${LLVM_PREFIX}" 
-          echo "Using macOS SDK: ${SDK_PATH}"
-          echo "CC=${LLVM_PREFIX}/bin/clang" >> $GITHUB_ENV
-          echo "CXX=${LLVM_PREFIX}/bin/clang++" >> $GITHUB_ENV
-          echo "SDKROOT=${SDK_PATH}" >> $GITHUB_ENV
-          echo "MACOSX_DEPLOYMENT_TARGET=${DEPLOYMENT_TARGET}" >> $GITHUB_ENV
-          ${LLVM_PREFIX}/bin/clang++ --version
-          xcrun --show-sdk-version
+          DEVELOPER_DIR=/Applications/Xcode_26.2.app/Contents/Developer
+          echo "DEVELOPER_DIR=${DEVELOPER_DIR}" >> $GITHUB_ENV
+          echo "CC=gcc-15" >> $GITHUB_ENV
+          echo "CXX=g++-15" >> $GITHUB_ENV
+          echo "SDKROOT=$(DEVELOPER_DIR=${DEVELOPER_DIR} xcrun --sdk macosx26.2 --show-sdk-path)" >> $GITHUB_ENV
+
+      - name: Show selected toolchain
+        run: |
+          xcodebuild -version
+          echo "SDK: ${SDKROOT}"
+          $CXX --version
 
       - name: Configure
-        run: cmake -DCCT_ENABLE_ASAN=OFF -DCMAKE_OSX_SYSROOT=$SDKROOT -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET -S . -B build -GNinja
+        run: cmake -DCCT_ENABLE_ASAN=OFF -DCMAKE_OSX_SYSROOT=$SDKROOT -S . -B build -GNinja
         env:
-          CC: ${{ env.CC }}
-          CXX: ${{ env.CXX }}
-          SDKROOT: ${{ env.SDKROOT }}
-          MACOSX_DEPLOYMENT_TARGET: ${{ env.MACOSX_DEPLOYMENT_TARGET }}
           CMAKE_BUILD_TYPE: ${{ matrix.buildmode }}
 
       - name: Build
@@ -54,4 +47,3 @@ jobs:
       - name: Sanity check main executable
         working-directory: ${{github.workspace}}/build
         run: ./coincenter --help
-

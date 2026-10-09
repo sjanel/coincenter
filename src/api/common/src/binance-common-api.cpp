@@ -48,11 +48,12 @@ schema::binance::NetworkCoinDataVector BinanceGlobalInfos::BinanceGlobalInfosFun
         return RequestRetry::Status::kResponseOK;
       });
 
+  // Binance lists some coins whose code is too long, or not ASCII (for instance '牛来')
   const auto [endIt, oldEndIt] =
-      std::ranges::remove_if(ret.data, [](const auto& el) { return el.coin.size() > CurrencyCode::kMaxLen; });
+      std::ranges::remove_if(ret.data, [](const auto& el) { return !CurrencyCode::IsValid(el.coin); });
 
   if (endIt != ret.data.end()) {
-    log::debug("{} currencies discarded for binance as code too long", ret.data.end() - endIt);
+    log::debug("{} currencies discarded for binance as code is invalid", ret.data.end() - endIt);
     ret.data.erase(endIt, ret.data.end());
   }
 
@@ -116,8 +117,8 @@ CurrencyExchangeFlatSet BinanceGlobalInfos::ExtractTradableCurrencies(
     const schema::binance::NetworkCoinDataVector& networkCoinDataVector, const CurrencyCodeSet& excludedCurrencies) {
   CurrencyExchangeVector currencies;
   for (const auto& coinJson : networkCoinDataVector) {
-    if (coinJson.coin.size() > CurrencyCode::kMaxLen) {
-      log::warn("Discard {} as code is too long", coinJson.coin);
+    if (!CurrencyCode::IsValid(coinJson.coin)) {
+      log::warn("Discard {} as code is invalid", coinJson.coin);
       continue;
     }
     CurrencyCode cur{coinJson.coin};

@@ -1,4 +1,4 @@
-FROM alpine:3.22 AS build
+FROM alpine:3.24 AS build
 
 # Declare and set default values of following arguments
 ARG BUILD_MODE=Release
@@ -8,7 +8,7 @@ ARG BUILD_WITH_PROMETHEUS=1
 ARG BUILD_WITH_PROTOBUF=1
 
 # Install base & build dependencies, needed certificates for https to work
-RUN apk add --update --upgrade --no-cache linux-headers g++ zlib-dev openssl-dev cmake ninja git ca-certificates
+RUN apk add --update --upgrade --no-cache linux-headers g++ zlib-dev openssl-dev curl-dev cmake ninja git ca-certificates
 
 # Copy source files
 WORKDIR /app/src

@@ -299,8 +299,8 @@ BalancePortfolio BinancePrivate::queryAccountBalance(const BalanceOptions& balan
   balancePortfolio.reserve(static_cast<BalancePortfolio::size_type>(v3AccountBalance.balances.size()));
 
   for (const auto& balance : v3AccountBalance.balances) {
-    if (balance.asset.size() > CurrencyCode::kMaxLen) {
-      log::warn("Skipping {} asset '{}' because it's too long", _exchangePublic.name(), balance.asset);
+    if (!CurrencyCode::IsValid(balance.asset)) {
+      log::warn("Skipping {} asset '{}' because its code is invalid", _exchangePublic.name(), balance.asset);
       continue;
     }
     CurrencyCode currencyCode(balance.asset);
@@ -540,8 +540,8 @@ DepositsSet BinancePrivate::queryRecentDeposits(const DepositsConstraints& depos
   deposits.reserve(static_cast<Deposits::size_type>(depositStatus.size()));
 
   for (auto& depositDetail : depositStatus) {
-    if (depositDetail.coin.size() > CurrencyCode::kMaxLen) {
-      log::warn("Skipping {} deposit '{}' because it's too long", exchangeName(), depositDetail.coin);
+    if (!CurrencyCode::IsValid(depositDetail.coin)) {
+      log::warn("Skipping {} deposit '{}' because its code is invalid", exchangeName(), depositDetail.coin);
       continue;
     }
 
@@ -637,8 +637,8 @@ WithdrawsSet BinancePrivate::queryRecentWithdraws(const WithdrawsConstraints& wi
       _httpClient, _apiKey, HttpRequestType::kGet, "/sapi/v1/capital/withdraw/history", _queryDelay,
       CreateOptionsFromWithdrawConstraints(withdrawsConstraints));
   for (auto& withdrawJson : data) {
-    if (withdrawJson.coin.size() > CurrencyCode::kMaxLen) {
-      log::warn("Skipping {} deposit '{}' because it's too long", exchangeName(), withdrawJson.coin);
+    if (!CurrencyCode::IsValid(withdrawJson.coin)) {
+      log::warn("Skipping {} deposit '{}' because its code is invalid", exchangeName(), withdrawJson.coin);
       continue;
     }
 
@@ -663,8 +663,8 @@ MonetaryAmountByCurrencySet BinancePrivate::AllWithdrawFeesFunc::operator()() {
   MonetaryAmountVector fees;
   for (const auto& [curCodeStr, withdrawFeeDetails] : result) {
     if (withdrawFeeDetails.withdrawStatus) {
-      if (curCodeStr.size() > CurrencyCode::kMaxLen) {
-        log::warn("Skipping {} deposit '{}' because it's too long", _exchangePublic.name(), curCodeStr);
+      if (!CurrencyCode::IsValid(curCodeStr)) {
+        log::warn("Skipping {} deposit '{}' because its code is invalid", _exchangePublic.name(), curCodeStr);
         continue;
       }
 

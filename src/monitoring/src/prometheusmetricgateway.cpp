@@ -3,12 +3,12 @@
 #include <prometheus/counter.h>
 #include <prometheus/gauge.h>
 #include <prometheus/histogram.h>
+#include <prometheus/labels.h>
 #include <prometheus/summary.h>
 
 #include <cassert>
 #include <chrono>
 #include <exception>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -57,7 +57,7 @@ PrometheusMetricGateway::~PrometheusMetricGateway() {
 }
 
 namespace {
-using ExtractedDataFromMetricKey = std::tuple<std::map<std::string, std::string>, std::string, std::string>;
+using ExtractedDataFromMetricKey = std::tuple<prometheus::Labels, std::string, std::string>;
 
 inline ExtractedDataFromMetricKey ExtractData(const MetricKey& key) {
   ExtractedDataFromMetricKey ret;

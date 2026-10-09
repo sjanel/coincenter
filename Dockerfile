@@ -1,4 +1,4 @@
-FROM ubuntu:24.04 AS build
+FROM ubuntu:26.04 AS build
 
 # Declare and set default values of following arguments
 ARG BUILD_MODE=Release
@@ -10,7 +10,7 @@ ARG BUILD_WITH_PROTOBUF=1
 # Install base & build dependencies, needed certificates for https to work
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends build-essential ninja-build libssl-dev zlib1g-dev cmake git ca-certificates
+    apt install -y --no-install-recommends build-essential ninja-build libssl-dev libcurl4-openssl-dev zlib1g-dev cmake git ca-certificates
 
 # Copy source files
 WORKDIR /app/src

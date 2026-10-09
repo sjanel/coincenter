@@ -82,7 +82,7 @@ TEST(MarketTest, JsonSerializationValue) {
 
   string buffer;
   auto res =
-      json::write<json::opts_ex{.raw_string = true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
+      json::write<json::opts_ex{{}, /*raw_string*/ true}>(foo, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -94,7 +94,7 @@ TEST(MarketTest, JsonSerializationKey) {
 
   string buffer;
   auto res =
-      json::write<json::opts_ex{.raw_string = true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
+      json::write<json::opts_ex{{}, /*raw_string*/ true}>(map, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -110,7 +110,7 @@ TEST(MarketTest, JsonSerializationVector) {
 
   string buffer;
   auto res =
-      json::write<json::opts_ex{.raw_string = true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
+      json::write<json::opts_ex{{}, /*raw_string*/ true}>(bar, buffer);  // NOLINT(readability-implicit-bool-conversion)
 
   EXPECT_FALSE(res);
 
@@ -121,7 +121,7 @@ TEST(MarketTest, JsonDeserialization) {
   Foo foo;
 
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
-  auto ec = json::read<json::opts_ex{.raw_string = true}>(foo, R"({"market":"DOGE-ETH"})");
+  auto ec = json::read<json::opts_ex{{}, /*raw_string*/ true}>(foo, R"({"market":"DOGE-ETH"})");
 
   ASSERT_FALSE(ec);
 

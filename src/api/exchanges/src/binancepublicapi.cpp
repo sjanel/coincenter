@@ -163,8 +163,8 @@ BinancePublic::ExchangeInfoFunc::ExchangeInfoDataByMarket BinancePublic::Exchang
       log::trace("Discard {}-{} as coincenter does not support leveraged markets", symbol.baseAsset, symbol.quoteAsset);
       continue;
     }
-    if (symbol.baseAsset.size() > CurrencyCode::kMaxLen || symbol.quoteAsset.size() > CurrencyCode::kMaxLen) {
-      log::trace("Discard {}-{} as one asset is too long", symbol.baseAsset, symbol.quoteAsset);
+    if (!CurrencyCode::IsValid(symbol.baseAsset) || !CurrencyCode::IsValid(symbol.quoteAsset)) {
+      log::trace("Discard {}-{} as one asset code is invalid", symbol.baseAsset, symbol.quoteAsset);
       continue;
     }
     log::trace("Accept {}-{} Binance asset pair", symbol.baseAsset, symbol.quoteAsset);

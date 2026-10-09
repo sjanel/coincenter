@@ -83,19 +83,46 @@ template <std::string_view const& Sep, std::string_view const&... Strs>
 inline constexpr auto JoinStringViewWithSep_v = JoinStringViewWithSep<Sep, Strs...>::value;
 
 namespace details {
-template <std::string_view const& Sep, const auto& a, typename>
-struct make_joined_string_view_impl;
+/// Same as JoinStringViewWithSep, but joining the elements of an array like value.
+/// Its elements are iterated in a constexpr function instead of being expanded as reference template arguments
+/// (references to array elements as non-type template arguments trigger an internal compiler error with MSVC 19.51).
+template <std::string_view const& Sep, const auto& a>
+class JoinArrayStringViewWithSep {
+ private:
+  static constexpr auto impl() noexcept {
+    constexpr std::string_view::size_type len = []() {
+      std::string_view::size_type totalLen = 0;
+      for (std::string_view sv : a) {
+        totalLen += sv.size();
+      }
+      return totalLen;
+    }();
+    constexpr auto nbSv = std::size(a);
+    std::array<char, len + 1U + ((nbSv == 0U ? 0U : (nbSv - 1U)) * Sep.size())> joined{};
+    auto it = joined.begin();
+    for (std::size_t svPos = 0; svPos < nbSv; ++svPos) {
+      if (svPos != 0) {
+        it = std::ranges::copy(Sep, it).out;
+      }
+      it = std::ranges::copy(std::string_view(a[svPos]), it).out;
+    }
+    joined.back() = '\0';
+    return joined;
+  }
 
-template <std::string_view const& Sep, const auto& a, std::size_t... i>
-struct make_joined_string_view_impl<Sep, a, std::index_sequence<i...>> {
-  static constexpr auto value = JoinStringViewWithSep<Sep, a[i]...>::value;
+  // Give the joined string static storage
+  static constexpr auto arr = impl();
+
+ public:
+  // View as a std::string_view
+  static constexpr std::string_view value{arr.data(), arr.size() - 1};
 };
 
 }  // namespace details
 
 // make joined string view from array like value
 template <std::string_view const& Sep, const auto& a>
-using make_joined_string_view = details::make_joined_string_view_impl<Sep, a, std::make_index_sequence<std::size(a)>>;
+using make_joined_string_view = details::JoinArrayStringViewWithSep<Sep, a>;
 
 /// Converts an integer value to its string_view representation at compile time.
 /// The underlying storage is not null terminated.

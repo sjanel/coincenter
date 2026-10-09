@@ -21,12 +21,12 @@ jobs:
 
     steps:
       - name: Checkout repository code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Prerequisites
         run: |
           sudo apt update
-          sudo apt install cmake gcc-13 g++-13 libssl-dev git libzstd-dev libbrotli-dev ninja-build -y --no-install-recommends
+          sudo apt install cmake gcc-13 g++-13 libssl-dev libcurl4-openssl-dev git libzstd-dev libbrotli-dev ninja-build -y --no-install-recommends
 
       - name: Install prometheus-cpp
         run: |
