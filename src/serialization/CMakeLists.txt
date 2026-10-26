@@ -7,7 +7,7 @@ else()
   set(SERIALIZATION_SRC "src/dummy-market-data-serializer.cpp" "src/dummy-market-data-deserializer.cpp")
 endif()
 
-add_coincenter_library(serialization STATIC ${SERIALIZATION_SRC})
+add_coincenter_library(serialization ${SERIALIZATION_SRC})
 
 target_link_libraries(coincenter_serialization PUBLIC coincenter_objects)
 

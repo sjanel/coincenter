@@ -6,7 +6,7 @@ else()
   list(REMOVE_ITEM MONITORING_SRC "src/prometheusmetricgateway.cpp")
 endif()
 
-add_coincenter_library(monitoring STATIC ${MONITORING_SRC})
+add_coincenter_library(monitoring ${MONITORING_SRC})
 target_link_libraries(coincenter_monitoring PRIVATE spdlog)
 target_link_libraries(coincenter_monitoring PUBLIC coincenter_tech)
 

@@ -1,6 +1,6 @@
 aux_source_directory(src SCHEMA_SRC)
 
-add_coincenter_library(schema STATIC ${SCHEMA_SRC})
+add_coincenter_library(schema ${SCHEMA_SRC})
 
 target_link_libraries(coincenter_schema PUBLIC coincenter_basic-objects)
 

@@ -1,7 +1,7 @@
 # Create objects lib
 aux_source_directory(src OBJECTS_SRC)
 
-add_coincenter_library(objects STATIC ${OBJECTS_SRC})
+add_coincenter_library(objects ${OBJECTS_SRC})
 
 target_link_libraries(coincenter_objects PUBLIC coincenter_tech)
 target_link_libraries(coincenter_objects PUBLIC coincenter_basic-objects)

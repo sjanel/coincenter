@@ -1,7 +1,7 @@
 
 aux_source_directory(src API_COMMON_SRC)
 
-add_coincenter_library(api-common STATIC ${API_COMMON_SRC})
+add_coincenter_library(api-common ${API_COMMON_SRC})
 
 target_link_libraries(coincenter_api-common PUBLIC coincenter_api-objects)
 target_link_libraries(coincenter_api-common PUBLIC coincenter_objects)

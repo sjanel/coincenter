@@ -1,6 +1,6 @@
 aux_source_directory(src TRADING-INDICATORS_SRC)
 
-add_coincenter_library(trading-indicators STATIC ${TRADING-INDICATORS_SRC})
+add_coincenter_library(trading-indicators ${TRADING-INDICATORS_SRC})
 
 target_link_libraries(coincenter_trading-indicators PUBLIC coincenter_trading-common)
 target_link_libraries(coincenter_trading-indicators PUBLIC coincenter_api-objects)

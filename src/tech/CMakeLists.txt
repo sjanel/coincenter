@@ -1,7 +1,7 @@
 # Lowest level services for coincenter
 aux_source_directory(src API_TECH_SRC)
 
-add_coincenter_library(tech STATIC ${API_TECH_SRC})
+add_coincenter_library(tech ${API_TECH_SRC})
 
 target_link_libraries(coincenter_tech PUBLIC glaze::glaze)
 
