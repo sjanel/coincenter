@@ -3,7 +3,7 @@ include(FetchContent)
 
 aux_source_directory(src API_EXCHANGES_SRC)
 
-add_coincenter_library(api-exchange STATIC ${API_EXCHANGES_SRC})
+add_coincenter_library(api-exchange ${API_EXCHANGES_SRC})
 
 target_link_libraries(coincenter_api-exchange PUBLIC coincenter_objects)
 target_link_libraries(coincenter_api-exchange PUBLIC coincenter_api-common)

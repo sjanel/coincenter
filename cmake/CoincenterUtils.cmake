@@ -3,7 +3,11 @@ function(add_coincenter_library name)
   set(multiValueArgs)
   cmake_parse_arguments(PARSE_ARGV 1 MY "${options}" "${oneValueArgs}" "${multiValueArgs}")
 
-  add_library(coincenter_${name} STATIC ${MY_UNPARSED_ARGUMENTS})
+  if(CCT_BUILD_SHARED)
+    add_library(coincenter_${name} SHARED ${MY_UNPARSED_ARGUMENTS})
+  else()
+    add_library(coincenter_${name} STATIC ${MY_UNPARSED_ARGUMENTS})
+  endif()
 
   target_set_coincenter_options(coincenter_${name})
 endfunction()

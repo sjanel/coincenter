@@ -1,6 +1,6 @@
 aux_source_directory(src API_IO_TOOLS_SRC)
 
-add_coincenter_library(http-request STATIC ${API_IO_TOOLS_SRC})
+add_coincenter_library(http-request ${API_IO_TOOLS_SRC})
 
 target_link_libraries(coincenter_http-request PUBLIC coincenter_tech)
 target_link_libraries(coincenter_http-request PRIVATE coincenter_monitoring)

@@ -19,7 +19,7 @@ if(CCT_BUILD_EXEC)
 
 else()
   list(REMOVE_ITEM ENGINE_SRC "src/main.cpp")
-  add_coincenter_library(coincenter STATIC ${MAIN_SRC})
+  add_coincenter_library(coincenter ${MAIN_SRC})
 endif()
 
 target_link_libraries(coincenter PUBLIC coincenter_engine)

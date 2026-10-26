@@ -162,6 +162,9 @@ The minimum tested version is cmake `3.15`, but it's recommended that you use th
 | `CCT_ENABLE_ASAN`       | `OFF`                                                  | Compile with AddressSanitizer                   |
 | `CCT_ENABLE_CLANG_TIDY` | `ON` if Debug mode and `clang-tidy` is found in `PATH` | Compile with clang-tidy checks                  |
 | `CCT_ENABLE_PROTO`      | `ON`                                                   | Compile with protobuf support                   |
+| `CCT_BUILD_SHARED`      | `OFF`                                                  | Build coincenter and aeronet libraries as shared (Linux / macOS only), to relink less on rebuilds |
+| `CCT_COMPACT_DEBUG_INFO` | `ON` for Debug with tests                             | Split DWARF + compressed debug sections (Linux with GCC / Clang), to shrink Debug binaries |
+| `CCT_ENABLE_CCACHE`     | `ON`                                                   | Use `ccache` if found in `PATH`                 |
 
 Example on Linux: to compile it in `Release` mode and `ninja` generator
 
