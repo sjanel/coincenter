@@ -12,6 +12,7 @@
 #include "enum-string.hpp"
 #include "exchange-name-enum.hpp"
 #include "file.hpp"
+#include "httpclient.hpp"
 #include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamount.hpp"

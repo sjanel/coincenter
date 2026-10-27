@@ -17,6 +17,11 @@ namespace cct {
 namespace {
 using namespace std::chrono_literals;
 
+// std::ranges::iota requires libstdc++ 15
+void Iota(auto& range, int startValue) {
+  std::iota(range.begin(), range.end(), startValue);  // NOLINT(modernize-use-ranges)
+}
+
 int SlowDouble(const int& val) {
   if (val == 42) {
     throw std::invalid_argument("42 is not the answer to the ultimate question of life");
@@ -83,7 +88,7 @@ TEST(ThreadPoolTest, ParallelTransformRandomInputIt) {
   ThreadPool threadPool(4);
   constexpr int kNbElems = 22;
   vector<int> data(kNbElems);
-  std::iota(data.begin(), data.end(), 0);
+  Iota(data, 0);
   vector<int> res(data.size());
 
   threadPool.parallelTransform(data, res.begin(), SlowDouble);
@@ -97,7 +102,7 @@ TEST(ThreadPoolTest, ParallelTransformForwardInputIt) {
   ThreadPool threadPool(3);
   constexpr int kNbElems = 13;
   std::forward_list<int> data(kNbElems);
-  std::iota(data.begin(), data.end(), 0);
+  Iota(data, 0);
 
   std::forward_list<int> res(kNbElems);
   threadPool.parallelTransform(data, res.begin(), SlowDouble);
@@ -111,7 +116,7 @@ TEST(ThreadPoolTest, ParallelTransformException) {
   ThreadPool threadPool(3);
   constexpr int kNbElems = 5;
   vector<int> data(kNbElems);
-  std::iota(data.begin(), data.end(), 40);
+  Iota(data, 40);
   vector<int> res(data.size(), 40);
 
   bool exceptionThrown = false;
@@ -131,10 +136,10 @@ TEST(ThreadPoolTest, ParallelTransformBinaryOperation) {
   constexpr int kNbElems = 11;
 
   std::forward_list<int> data1(kNbElems);
-  std::iota(data1.begin(), data1.end(), 0);
+  Iota(data1, 0);
 
   vector<int> data2(kNbElems);
-  std::iota(data2.begin(), data2.end(), 3);
+  Iota(data2, 3);
 
   vector<int> res(kNbElems);
   threadPool.parallelTransform(data1, data2, res.begin(), SlowAdd);

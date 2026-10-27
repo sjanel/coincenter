@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <utility>
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
@@ -25,7 +26,7 @@ ZstdOutputStream::ZstdOutputStream(::google::protobuf::io::ZeroCopyOutputStream*
     throw exception("Cannot create zstd compression context");
   }
   const std::size_t ret = ZSTD_CCtx_setParameter(_cctx.get(), ZSTD_c_compressionLevel, compressionLevel);
-  if (ZSTD_isError(ret)) {
+  if (ZSTD_isError(ret) != 0) {
     throw exception("Cannot set zstd compression level {}: {}", compressionLevel, ZSTD_getErrorName(ret));
   }
   _inBuf = std::make_unique_for_overwrite<std::byte[]>(_inBufSize);
@@ -51,7 +52,7 @@ bool ZstdOutputStream::Next(void** data, int* size) {
 }
 
 void ZstdOutputStream::BackUp(int count) {
-  assert(count >= 0 && static_cast<std::size_t>(count) <= _inPending);
+  assert(count >= 0 && std::cmp_less_equal(count, _inPending));
   _inPending -= static_cast<std::size_t>(count);
   _byteCount -= count;
 }
@@ -83,7 +84,7 @@ bool ZstdOutputStream::compressPending(Mode mode) {
     }
     ZSTD_outBuffer output{_pOutBuf, _outAvail, 0};
     remaining = ZSTD_compressStream2(_cctx.get(), &output, &input, endDirective);
-    if (ZSTD_isError(remaining)) {
+    if (ZSTD_isError(remaining) != 0) {
       log::error("zstd compression error: {}", ZSTD_getErrorName(remaining));
       _failed = true;
       return false;
@@ -140,7 +141,7 @@ bool ZstdInputStream::Next(const void** data, int* size) {
     ZSTD_outBuffer output{_outBuf.get(), _outBufSize, 0};
     // Frames following each other in the stream are decompressed transparently
     const std::size_t ret = ZSTD_decompressStream(_dctx.get(), &output, &input);
-    if (ZSTD_isError(ret)) {
+    if (ZSTD_isError(ret) != 0) {
       log::error("zstd decompression error: {}", ZSTD_getErrorName(ret));
       _failed = true;
       return false;
@@ -158,7 +159,7 @@ bool ZstdInputStream::Next(const void** data, int* size) {
 }
 
 void ZstdInputStream::BackUp(int count) {
-  assert(count >= 0 && static_cast<std::size_t>(count) <= _outSize);
+  assert(count >= 0 && std::cmp_less_equal(count, _outSize));
   _backedUp = static_cast<std::size_t>(count);
   _byteCount -= count;
 }

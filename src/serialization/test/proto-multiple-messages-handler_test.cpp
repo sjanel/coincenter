@@ -6,7 +6,6 @@
 #include <iterator>
 #include <sstream>
 #include <string>
-#include <utility>
 
 #include "cct_exception.hpp"
 #include "proto-constants.hpp"
@@ -17,6 +16,8 @@
 #include "serialization-tools.hpp"
 
 namespace cct {
+
+namespace {
 
 class ProtobufMessagesTest : public ProtobufBaseDataTest {
  protected:
@@ -39,6 +40,8 @@ class ProtobufMessagesCompressionTest : public ProtobufMessagesTest,
     return nbObjectsRead;
   }
 };
+
+}  // namespace
 
 TEST_F(ProtobufMessagesTest, DefaultConstruction) {}
 

@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ubuntu-build:
     name: Build on Ubuntu
@@ -40,11 +44,11 @@ jobs:
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
-        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure --repeat until-pass:5
+        run: ctest -j -C ${{matrix.buildmode}} --output-on-failure --repeat until-pass:5
 
       - name: Sanity check main executable
         working-directory: ${{github.workspace}}/build

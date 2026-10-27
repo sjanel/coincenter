@@ -83,5 +83,5 @@ function(add_exe name)
   list(REMOVE_DUPLICATES exe_include_dirs)
   target_include_directories(${name} PRIVATE ${exe_include_dirs} ${exe_directories})
 
-  target_set_coincenter_options(${name})
+  CoincenterSetProjectProperties(${name})
 endfunction()

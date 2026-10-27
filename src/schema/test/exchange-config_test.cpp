@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <type_traits>
 
 #include "cct_log.hpp"
 #include "cct_string.hpp"
@@ -15,6 +14,7 @@
 
 namespace cct::schema {
 
+namespace {
 class ExchangeConfigTest : public ::testing::Test {
  protected:
   class NominalCase : public Reader {
@@ -163,6 +163,7 @@ class ExchangeConfigTest : public ::testing::Test {
     }
   };
 };
+}  // namespace
 
 TEST_F(ExchangeConfigTest, DirectRead) {
   auto exchangeConfigOptional = ReadJsonOrThrow<details::AllExchangeConfigsOptional>(NominalCase{});

@@ -14,6 +14,7 @@
 #include "ma-crossover-trader.hpp"
 #include "market-maker-trader.hpp"
 #include "mean-reversion-trader.hpp"
+#include "priceoptionsdef.hpp"
 #include "rsi-trader.hpp"
 
 namespace cct {

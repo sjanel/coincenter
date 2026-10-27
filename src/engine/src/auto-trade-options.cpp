@@ -1,9 +1,15 @@
 #include "auto-trade-options.hpp"
 
+#include <algorithm>
+#include <ranges>
+#include <string_view>
 #include <utility>
 
 #include "auto-trade-config.hpp"
 #include "cct_invalid_argument_exception.hpp"
+#include "exchange-name-enum.hpp"
+#include "exchange-names.hpp"
+#include "exchangename.hpp"
 
 namespace cct {
 
@@ -32,7 +38,7 @@ ExchangeNames AutoTradeOptions::exchangeNames() const {
 
 ExchangeNameEnumVector AutoTradeOptions::publicExchanges() const {
   ExchangeNameEnumVector exchanges;
-  for (const auto& [publicExchangeName, _] : _autoTradeConfig) {
+  for (ExchangeNameEnum publicExchangeName : _autoTradeConfig | std::views::keys) {
     exchanges.emplace_back(publicExchangeName);
   }
   std::ranges::sort(exchanges);

@@ -1,5 +1,8 @@
 #include "timestring.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
@@ -119,16 +122,21 @@ char* TimeToStringIso8601UTCWithMillis(TimePoint timePoint, char* buffer) {
 }
 
 TimePoint StringToTimeISO8601UTC(const char* begPtr, const char* endPtr) {
-  if (CCT_UNLIKELY(endPtr - begPtr < 19)) {
+  if (endPtr - begPtr < 19) [[unlikely]] {
     throw invalid_argument("ISO8601UTC Time string '{}' is too short, expected at least 19 characters",
                            std::string_view(begPtr, endPtr));
   }
 
-  TimePoint ts = std::chrono::sys_days{std::chrono::year_month_day{std::chrono::year(parse4(begPtr)),
-                                                                   std::chrono::month(parse2(begPtr + 5)),
-                                                                   std::chrono::day(parse2(begPtr + 8))}} +
-                 std::chrono::hours{parse2(begPtr + 11)} + std::chrono::minutes{parse2(begPtr + 14)} +
-                 std::chrono::seconds{parse2(begPtr + 17)};
+  TimePoint ts =
+      std::chrono::sys_days{
+          std::chrono::year_month_day{
+              std::chrono::year(parse4(begPtr)),
+              std::chrono::month(parse2(begPtr + 5)),
+              std::chrono::day(parse2(begPtr + 8)),
+          },
+      } +
+      std::chrono::hours{parse2(begPtr + 11)} + std::chrono::minutes{parse2(begPtr + 14)} +
+      std::chrono::seconds{parse2(begPtr + 17)};
 
   if (begPtr + 20 < endPtr) {
     if (*(endPtr - 1) == 'Z') {

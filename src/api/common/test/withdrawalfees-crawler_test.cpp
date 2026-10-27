@@ -10,6 +10,7 @@
 #include "cct_log.hpp"
 #include "coincenterinfo.hpp"
 #include "exchange-name-enum.hpp"
+#include "monetaryamount.hpp"
 #include "runmodes.hpp"
 #include "timedef.hpp"
 

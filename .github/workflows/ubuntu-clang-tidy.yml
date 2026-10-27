@@ -6,13 +6,17 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ubuntu-clang-tidy-build:
     name: Build on Ubuntu with clang-tidy checks
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        clang-version: [21]
+        clang-version: [23]
         buildmode: [Debug]
 
     steps:
@@ -42,4 +46,4 @@ jobs:
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel

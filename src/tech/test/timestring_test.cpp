@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <regex>
 #include <thread>
 
@@ -148,7 +149,11 @@ TEST(TimeStringIso8601UTCTest, RoundTripConversion) {
   EXPECT_EQ(std::string(buf2, end2 - buf2), iso);
 }
 
+namespace {
+
 class StringToTimeISO8601UTCTest : public ::testing::Test {};
+
+}  // namespace
 
 // ------------------------ Valid cases ------------------------
 TEST_F(StringToTimeISO8601UTCTest, ParsesBasicISO8601UTC) {

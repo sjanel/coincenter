@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include <string_view>
+#include <utility>
 
 #include "exchange-config.hpp"
 #include "market-order-book-vector.hpp"
@@ -12,6 +13,7 @@
 #include "marketorderbook.hpp"
 #include "mean-reversion-trader.hpp"
 #include "monetaryamount.hpp"
+#include "priceoptionsdef.hpp"
 #include "public-trade-vector.hpp"
 #include "rsi-trader.hpp"
 #include "timedef.hpp"
@@ -29,7 +31,6 @@ MarketOrderBook MakeOrderBook(TimePoint ts, double mid) {
   const MonetaryAmount volume(1000, "SOL");
   return MarketOrderBook(ts, askPrice, volume, bidPrice, volume, VolAndPriNbDecimals{2, 2});
 }
-}  // namespace
 
 class MarketTraderSuiteTest : public ::testing::Test {
  protected:
@@ -38,6 +39,8 @@ class MarketTraderSuiteTest : public ::testing::Test {
   MarketTraderFactory factory;
   TimePoint t0{Clock::now()};
 };
+
+}  // namespace
 
 // Regression test: a taker BUY used to add a quote amount to the base balance, throwing
 // "Addition is only possible on amounts with same currency". buy-and-hold issues a taker buy.

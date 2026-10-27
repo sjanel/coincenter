@@ -17,6 +17,10 @@ on:
   schedule:
     - cron: "35 10 * * 3"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze
@@ -64,7 +68,7 @@ jobs:
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
-        run: cmake --build build --config ${{matrix.buildmode}}
+        run: cmake --build build --config ${{matrix.buildmode}} --parallel
 
       # ℹ️ Command-line programs to run using the OS shell.
       # 📚 https://git.io/JvXDl

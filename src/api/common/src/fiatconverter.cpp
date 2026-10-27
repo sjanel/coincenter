@@ -13,6 +13,7 @@
 #include "currencycode.hpp"
 #include "fiats-converter-responses-schema.hpp"
 #include "file.hpp"
+#include "httpclient.hpp"
 #include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "market.hpp"
@@ -152,7 +153,7 @@ std::optional<double> FiatConverter::convert(double amount, CurrencyCode from, C
 
   const Market market(from, to);
 
-  std::lock_guard<std::mutex> guard(_pricesMutex);
+  std::scoped_lock guard(_pricesMutex);
 
   // First query in the cache with not up to date rates
   auto optRate = retrieveRateFromCache(market, CacheReadMode::kOnlyRecentRates);

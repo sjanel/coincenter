@@ -160,8 +160,8 @@ The minimum tested version is cmake `3.15`, but it's recommended that you use th
 | ----------------------- | ------------------------------------------------------ | ----------------------------------------------- |
 | `CCT_ENABLE_TESTS`      | `ON` if main project                                   | Build and launch unit tests                     |
 | `CCT_BUILD_EXEC`        | `ON` if main project                                   | Build an executable instead of a static library |
-| `CCT_ENABLE_ASAN`       | `OFF`                                                  | Compile with AddressSanitizer                   |
-| `CCT_ENABLE_CLANG_TIDY` | `ON` if Debug mode and `clang-tidy` is found in `PATH` | Compile with clang-tidy checks                  |
+| `CCT_ENABLE_ASAN`       | `OFF`                                                  | Compile with AddressSanitizer (also UBSan on the coincenter targets only; the dependencies get ASan alone, required for ABI compatibility) |
+| `CCT_ENABLE_CLANG_TIDY` | `OFF`                                                  | Compile the coincenter targets with clang-tidy checks (not the fetched dependencies) |
 | `CCT_ENABLE_PROTO`      | `ON`                                                   | Compile with protobuf support                   |
 | `CCT_BUILD_SHARED`      | `OFF`                                                  | Build coincenter and aeronet libraries as shared (Linux / macOS only), to relink less on rebuilds |
 | `CCT_COMPACT_DEBUG_INFO` | `ON` for Debug with tests                             | Split DWARF + compressed debug sections (Linux with GCC / Clang), to shrink Debug binaries |

@@ -93,7 +93,7 @@ Duration ParseDuration(std::string_view durationStr) {
   if (durationStr.empty()) {
     throw invalid_argument("Empty duration is not allowed");
   }
-  if (durationStr.find('.') != std::string_view::npos) {
+  if (durationStr.contains('.')) {
     throw invalid_argument("Time amount should be an integral value");
   }
 

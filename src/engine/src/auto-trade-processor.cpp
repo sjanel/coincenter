@@ -1,10 +1,18 @@
 #include "auto-trade-processor.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <string_view>
 #include <thread>
 
+#include "auto-trade-config.hpp"
 #include "auto-trade-options.hpp"
 #include "cct_exception.hpp"
+#include "cct_log.hpp"
 #include "coincenterinfo.hpp"
+#include "exchange-config.hpp"
+#include "exchange-name-enum.hpp"
+#include "timedef.hpp"
 #include "timestring.hpp"
 
 namespace cct {

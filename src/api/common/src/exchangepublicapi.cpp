@@ -86,7 +86,7 @@ std::optional<MonetaryAmount> ExchangePublic::convert(MonetaryAmount from, Curre
                                                       : schema::ExchangeTradeFeesConfig::FeeType::Maker;
 
   if (marketOrderBookMap.empty()) {
-    std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+    std::scoped_lock guard(_publicRequestsMutex);
     marketOrderBookMap = queryAllApproximatedOrderBooks(1);
   }
 
@@ -242,7 +242,7 @@ MarketsPath ExchangePublic::findMarketsPath(CurrencyCode fromCurrency, CurrencyC
 
     // Retrieve markets if not already done
     if (markets.empty()) {
-      std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+      std::scoped_lock guard(_publicRequestsMutex);
       markets = queryTradableMarkets();
       if (markets.empty()) {
         log::error("No markets retrieved for {}", name());
@@ -339,7 +339,7 @@ std::optional<Market> ExchangePublic::RetrieveMarket(CurrencyCode c1, CurrencyCo
 }
 
 std::optional<Market> ExchangePublic::retrieveMarket(CurrencyCode c1, CurrencyCode c2) {
-  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+  std::scoped_lock guard(_publicRequestsMutex);
   return RetrieveMarket(c1, c2, queryTradableMarkets());
 }
 
@@ -391,7 +391,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
   if (markets.empty()) {
     // Without any currency, and because "marketStr" is returned without hyphen, there is no easy way to guess the
     // currencies so we need to compare with the markets that exist
-    std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+    std::scoped_lock guard(_publicRequestsMutex);
     markets = queryTradableMarkets();
   }
 
@@ -421,7 +421,7 @@ std::optional<Market> ExchangePublic::determineMarketFromMarketStr(std::string_v
 Market ExchangePublic::determineMarketFromFilterCurrencies(MarketSet& markets, CurrencyCode filterCur1,
                                                            CurrencyCode filterCur2) {
   if (markets.empty()) {
-    std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+    std::scoped_lock guard(_publicRequestsMutex);
     markets = queryTradableMarkets();
   }
 
@@ -473,7 +473,7 @@ MonetaryAmount ExchangePublic::queryWithdrawalFeeOrZero(CurrencyCode currencyCod
 }
 
 MarketOrderBook ExchangePublic::getOrderBook(Market mk, int depth) {
-  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+  std::scoped_lock guard(_publicRequestsMutex);
   const auto marketOrderBook = queryOrderBook(mk, depth);
 
   if (_exchangeConfig.query.marketDataSerialization) {
@@ -484,7 +484,7 @@ MarketOrderBook ExchangePublic::getOrderBook(Market mk, int depth) {
 
 /// Retrieve an ordered vector of recent last trades
 PublicTradeVector ExchangePublic::getLastTrades(Market mk, int nbTrades) {
-  std::lock_guard<std::recursive_mutex> guard(_publicRequestsMutex);
+  std::scoped_lock guard(_publicRequestsMutex);
   const auto lastTrades = queryLastTrades(mk, nbTrades);
 
   if (_exchangeConfig.query.marketDataSerialization) {

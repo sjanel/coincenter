@@ -204,11 +204,10 @@ BalancePerExchange ExchangesOrchestrator::getBalance(ExchangeNameSpan privateExc
 
   BalancePerExchange ret;
   ret.reserve(selectedExchanges.size());
-  // Note: we can use std::ranges::transform with balancePortfolios | std::views::as_rvalues in C++23
-  std::transform(selectedExchanges.begin(), selectedExchanges.end(), std::make_move_iterator(balancePortfolios.begin()),
-                 std::back_inserter(ret), [](Exchange* exchange, BalancePortfolio&& balancePortfolio) {
-                   return std::make_pair(exchange, std::move(balancePortfolio));
-                 });
+  std::ranges::transform(selectedExchanges, balancePortfolios | std::views::as_rvalue, std::back_inserter(ret),
+                         [](Exchange* exchange, BalancePortfolio&& balancePortfolio) {
+                           return std::make_pair(exchange, std::move(balancePortfolio));
+                         });
 
   return ret;
 }
@@ -249,10 +248,9 @@ WalletPerExchange ExchangesOrchestrator::getDepositInfo(ExchangeNameSpan private
   });
   WalletPerExchange ret;
   ret.reserve(depositInfoExchanges.size());
-  // Note: we can use std::ranges::transform with walletPerExchange | std::views::as_rvalues in C++23
-  std::transform(depositInfoExchanges.begin(), depositInfoExchanges.end(),
-                 std::make_move_iterator(walletPerExchange.begin()), std::back_inserter(ret),
-                 [](const Exchange* exchange, Wallet&& wallet) { return std::make_pair(exchange, std::move(wallet)); });
+  std::ranges::transform(
+      depositInfoExchanges, walletPerExchange | std::views::as_rvalue, std::back_inserter(ret),
+      [](const Exchange* exchange, Wallet&& wallet) { return std::make_pair(exchange, std::move(wallet)); });
   return ret;
 }
 

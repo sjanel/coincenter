@@ -41,6 +41,7 @@ TEST_F(CoincenterCmdLineOptionsTest, DefaultConstructorShouldValueInitializeAll)
   alignas(CoincenterCmdLineOptions) std::uint8_t data[sizeof(CoincenterCmdLineOptions)];
 
   // fill memory with garbage
+  // NOLINTNEXTLINE(modernize-use-ranges) - std::ranges::iota requires libstdc++ 15
   std::iota(std::begin(data), std::end(data), static_cast<std::remove_reference_t<decltype(data[0])>>(0));
 
   // default construct

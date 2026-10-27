@@ -83,7 +83,7 @@ BinanceGlobalInfos::BinanceGlobalInfos(CachedResultOptions&& cachedResultOptions
     : _globalInfosCache(cachedResultOptions, pMetricGateway, permanentHttpRequestOptions, runMode) {}
 
 MonetaryAmountByCurrencySet BinanceGlobalInfos::queryWithdrawalFees() {
-  std::lock_guard<std::mutex> guard(_mutex);
+  std::scoped_lock guard(_mutex);
   const auto& allCoins = _globalInfosCache.get();
 
   MonetaryAmountVector fees(allCoins.size());
@@ -97,7 +97,7 @@ MonetaryAmountByCurrencySet BinanceGlobalInfos::queryWithdrawalFees() {
 }
 
 MonetaryAmount BinanceGlobalInfos::queryWithdrawalFee(CurrencyCode currencyCode) {
-  std::lock_guard<std::mutex> guard(_mutex);
+  std::scoped_lock guard(_mutex);
   const auto& allCoins = _globalInfosCache.get();
   const auto curStr = currencyCode.str();
 
@@ -109,7 +109,7 @@ MonetaryAmount BinanceGlobalInfos::queryWithdrawalFee(CurrencyCode currencyCode)
 }
 
 CurrencyExchangeFlatSet BinanceGlobalInfos::queryTradableCurrencies(const CurrencyCodeSet& excludedCurrencies) {
-  std::lock_guard<std::mutex> guard(_mutex);
+  std::scoped_lock guard(_mutex);
   return ExtractTradableCurrencies(_globalInfosCache.get(), excludedCurrencies);
 }
 
