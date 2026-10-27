@@ -46,6 +46,8 @@ Main features:
 - Market order book
 - Public trades
 
+Files are compressed with [zstd](https://facebook.github.io/zstd/) (files written by older versions with gzip are still read transparently, and an existing gzip file is appended in gzip).
+
 Refer to the dedicated [documentation page](TRADING.md) for more information.
 
 ## Supported exchanges

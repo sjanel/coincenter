@@ -2,6 +2,15 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
+#include <ios>
+#include <sstream>
+#include <string>
+#include <string_view>
+
+#include "proto-constants.hpp"
+
 namespace cct {
 
 TEST(SerializationTools, ComputeProtoSubPath) {
@@ -35,6 +44,44 @@ TEST(SerializationTools, ComputeProtoFileName) {
   EXPECT_EQ(ComputeProtoFileName(4), "04-00-00_04-59-59.binpb");
   EXPECT_EQ(ComputeProtoFileName(17), "17-00-00_17-59-59.binpb");
   EXPECT_EQ(ComputeProtoFileName(23), "23-00-00_23-59-59.binpb");
+}
+
+TEST(SerializationTools, DetectProtobufCompressionFromStream) {
+  std::stringstream gzipStream(std::string("\x1f\x8b\x08\x00", 4));
+  EXPECT_EQ(DetectProtobufCompression(gzipStream), ProtobufCompression::kGzip);
+  // detection does not consume the stream
+  EXPECT_EQ(gzipStream.get(), 0x1f);
+
+  std::stringstream zstdStream(std::string("\x28\xb5\x2f\xfd", 4));
+  EXPECT_EQ(DetectProtobufCompression(zstdStream), ProtobufCompression::kZstd);
+  EXPECT_EQ(zstdStream.get(), 0x28);
+
+  std::stringstream emptyStream;
+  EXPECT_EQ(DetectProtobufCompression(emptyStream), ProtobufCompression::kGzip);
+}
+
+TEST(SerializationTools, DetectProtobufFileCompression) {
+  const std::filesystem::path dir = std::filesystem::temp_directory_path() / "cct-detect-compression-test";
+  std::filesystem::create_directories(dir);
+
+  const auto write = [&dir](std::string_view name, std::string_view content) {
+    std::filesystem::path path = dir / name;
+    std::ofstream(path, std::ios::binary) << content;
+    return path;
+  };
+
+  const auto gzipPath = write("gzip", std::string_view("\x1f\x8b\x08\x00", 4));
+  const auto zstdPath = write("zstd", std::string_view("\x28\xb5\x2f\xfd", 4));
+  const auto emptyPath = write("empty", "");
+
+  for (ProtobufCompression fallback : {ProtobufCompression::kGzip, ProtobufCompression::kZstd}) {
+    EXPECT_EQ(DetectProtobufFileCompression(gzipPath, fallback), ProtobufCompression::kGzip);
+    EXPECT_EQ(DetectProtobufFileCompression(zstdPath, fallback), ProtobufCompression::kZstd);
+    EXPECT_EQ(DetectProtobufFileCompression(emptyPath, fallback), fallback);
+    EXPECT_EQ(DetectProtobufFileCompression(dir / "missing", fallback), fallback);
+  }
+
+  std::filesystem::remove_all(dir);
 }
 
 }  // namespace cct

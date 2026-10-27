@@ -1,7 +1,10 @@
 #pragma once
 
 #include <filesystem>
+#include <istream>
 #include <string_view>
+
+#include "proto-constants.hpp"
 
 namespace cct {
 
@@ -25,5 +28,13 @@ std::string_view DayOfMonthStr(int dayOfMonth);
 /// Example:
 ///  ComputeProtoFileName(4) -> "04:00:00_04:59:59.binpb"
 std::string_view ComputeProtoFileName(int hourOfDay);
+
+/// Detects the compression format of a protobuf stream from its first byte, without consuming it.
+/// An empty or unknown content is considered as gzip (the historical format).
+ProtobufCompression DetectProtobufCompression(std::istream& is);
+
+/// Detects the compression format of an existing protobuf file.
+/// Returns 'fallback' if the file does not exist or is empty.
+ProtobufCompression DetectProtobufFileCompression(const std::filesystem::path& path, ProtobufCompression fallback);
 
 }  // namespace cct

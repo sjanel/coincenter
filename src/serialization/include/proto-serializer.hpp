@@ -19,6 +19,7 @@
 #include "durationstring.hpp"
 #include "market-timestamp-set.hpp"
 #include "market.hpp"
+#include "proto-constants.hpp"
 #include "proto-multiple-messages-handler.hpp"
 #include "serialization-tools.hpp"
 #include "stringconv.hpp"
@@ -42,9 +43,14 @@ class ProtobufObjectsSerializer {
   /// Creates a new ProtobufObjectsSerializer.
   /// @param marketTimestampSet the latest written timestamp for all markets to avoid writing duplicate entries between
   /// coincenter restarts.
+  /// @param compression compression format of new files. When appending to an existing file, its own format is kept
+  /// (so that a file is never written with several formats).
   ProtobufObjectsSerializer(std::filesystem::path subPath, const MarketTimestampSet& marketTimestampSet,
-                            int32_t nbObjectsPerMarketInMemory)
-      : _subPath(std::move(subPath)), _nbObjectsPerMarketInMemory(nbObjectsPerMarketInMemory) {
+                            int32_t nbObjectsPerMarketInMemory,
+                            ProtobufCompression compression = kDefaultProtobufCompression)
+      : _subPath(std::move(subPath)),
+        _nbObjectsPerMarketInMemory(nbObjectsPerMarketInMemory),
+        _compression(compression) {
     for (const auto& [market, timestamp] : marketTimestampSet) {
       auto& lastWrittenObjectTimestamp = _marketDataMap[market].lastWrittenObjectTimestamp;
 
@@ -111,6 +117,7 @@ class ProtobufObjectsSerializer {
     _marketDataMap.swap(rhs._marketDataMap);
     _subPath.swap(rhs._subPath);
     std::swap(_nbObjectsPerMarketInMemory, rhs._nbObjectsPerMarketInMemory);
+    std::swap(_compression, rhs._compression);
     std::swap(_flushCounter, rhs._flushCounter);
   }
 
@@ -232,6 +239,8 @@ class ProtobufObjectsSerializer {
 
       path /= ComputeProtoFileName(std::chrono::duration_cast<std::chrono::hours>(hourOfDay).count());
 
+      const ProtobufCompression fileCompression = DetectProtobufFileCompression(path, _compression);
+
       std::ofstream ofs(path, std::ios_base::out | std::ios::binary | std::ios_base::app);
 
       if (!ofs.is_open()) {
@@ -239,7 +248,7 @@ class ProtobufObjectsSerializer {
                         errno);
       }
 
-      protobufMessagesWriter.open(std::move(ofs));
+      protobufMessagesWriter.open(std::move(ofs), fileCompression);
       prevHourOfDay = hourOfDay;
     }
   }
@@ -266,6 +275,7 @@ class ProtobufObjectsSerializer {
   std::filesystem::path _subPath;
   int32_t _nbObjectsPerMarketInMemory;
   int32_t _flushCounter{};
+  ProtobufCompression _compression;
 };
 
 }  // namespace cct

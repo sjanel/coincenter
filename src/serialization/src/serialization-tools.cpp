@@ -3,7 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <filesystem>
+#include <fstream>
+#include <ios>
+#include <istream>
 #include <string_view>
+#include <system_error>
 
 #include "proto-constants.hpp"
 
@@ -18,6 +22,21 @@ std::filesystem::path ComputeProtoSubPath(std::string_view dataDir, std::string_
   ret /= exchangeName;
 
   return ret;
+}
+
+ProtobufCompression DetectProtobufCompression(std::istream& is) {
+  // zstd frames start with the magic number 0xFD2FB528 (little endian: 28 B5 2F FD), gzip streams with 1F 8B.
+  static constexpr int kZstdFirstByte = 0x28;
+  return is.peek() == kZstdFirstByte ? ProtobufCompression::kZstd : ProtobufCompression::kGzip;
+}
+
+ProtobufCompression DetectProtobufFileCompression(const std::filesystem::path& path, ProtobufCompression fallback) {
+  std::error_code ec;
+  if (std::filesystem::file_size(path, ec) == 0 || ec) {
+    return fallback;
+  }
+  std::ifstream ifs(path, std::ios::in | std::ios::binary);
+  return DetectProtobufCompression(ifs);
 }
 
 namespace {

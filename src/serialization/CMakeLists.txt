@@ -18,6 +18,17 @@ if(CCT_ENABLE_PROTO)
 
   target_link_libraries(coincenter_serialization PUBLIC protobuf::libprotobuf ZLIB::ZLIB)
 
+  # zstd is provided by aeronet (AERONET_ENABLE_ZSTD): either built from source (libzstd_static) or found on the system.
+  # An imported target found in aeronet's directory scope is not visible here, so look it up again in this case.
+  if(NOT TARGET libzstd_static AND NOT TARGET zstd::libzstd)
+    find_package(zstd CONFIG REQUIRED)
+  endif()
+  if(TARGET libzstd_static)
+    target_link_libraries(coincenter_serialization PRIVATE libzstd_static)
+  else()
+    target_link_libraries(coincenter_serialization PRIVATE zstd::libzstd)
+  endif()
+
   protobuf_generate(
     TARGET coincenter_serialization
     IMPORT_DIRS "${CMAKE_CURRENT_LIST_DIR}/proto"
