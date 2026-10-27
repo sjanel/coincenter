@@ -20,6 +20,7 @@
 #include "apiquerytypeenum.hpp"
 #include "bithumb-schema.hpp"
 #include "cachedresult.hpp"
+#include "cct_json.hpp"
 #include "cct_log.hpp"
 #include "cct_string.hpp"
 #include "coincenterinfo.hpp"

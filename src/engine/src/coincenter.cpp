@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <array>
 #include <csignal>
+#include <cstddef>
+#include <exception>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -32,6 +34,8 @@
 #include "market.hpp"
 #include "monetaryamount.hpp"
 #include "ordersconstraints.hpp"
+#include "public-trade-vector.hpp"
+#include "publictrade.hpp"
 #include "query-result-type-helpers.hpp"
 #include "queryresulttypes.hpp"
 #include "replay-options.hpp"
@@ -119,7 +123,7 @@ MarketDataPerExchange Coincenter::queryMarketDataPerExchange(std::span<const Mar
 BalancePerExchange Coincenter::getBalance(std::span<const ExchangeName> privateExchangeNames,
                                           const BalanceOptions& balanceOptions) {
   CurrencyCode equiCurrency = balanceOptions.equiCurrency();
-  const auto equiCur = _coincenterInfo.tryConvertStableCoinToFiat(equiCurrency);
+  const CurrencyCode equiCur = _coincenterInfo.tryConvertStableCoinToFiat(equiCurrency);
   if (equiCur.isDefined()) {
     log::warn("Consider {} instead of stable coin {} as equivalent currency", equiCur, equiCurrency);
     equiCurrency = equiCur;

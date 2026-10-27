@@ -160,7 +160,7 @@ inline std::pair<MonetaryAmount::AmountType, int8_t> AmountIntegralFromStr(std::
       continue;
     }
 
-    integralValue = integralValue * 10 + intDigit;
+    integralValue = (integralValue * 10) + intDigit;
   }
 
   // At this point, charPos points to the end of the amount string, but before the scientific notation if it exists.

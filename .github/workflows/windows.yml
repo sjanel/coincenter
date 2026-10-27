@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows:
     name: Build on Windows
@@ -27,14 +31,14 @@ jobs:
           CMAKE_TOOLCHAIN_FILE: "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 
       - name: Build
-        run: cmake --build build --config ${{matrix.buildmode}} --parallel 4
+        run: cmake --build build --config ${{matrix.buildmode}} --parallel
 
       - name: Add vcpkg DLLs directory to PATH
         run: echo "${{github.workspace}}\build\vcpkg_installed\x64-windows\${{ matrix.buildmode == 'Debug' && 'debug\bin' || 'bin' }}" >> $env:GITHUB_PATH
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
-        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure --repeat until-pass:5
+        run: ctest -j -C ${{matrix.buildmode}} --output-on-failure --repeat until-pass:5
 
       - name: Sanity check main executable
         working-directory: ${{github.workspace}}/build/${{matrix.buildmode}}

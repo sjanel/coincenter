@@ -1,11 +1,14 @@
 #include "auto-trade-config.hpp"
 
 #include <cstring>
+#include <string_view>
+#include <type_traits>
 #include <variant>
 
 #include "durationstring.hpp"
 #include "nchars.hpp"
 #include "stringconv.hpp"
+#include "timedef.hpp"
 
 namespace cct::schema {
 

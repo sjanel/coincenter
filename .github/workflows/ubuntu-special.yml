@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ubuntu-special-build:
     name: Build on Ubuntu with monitoring / protobuf support
@@ -36,7 +40,7 @@ jobs:
           git submodule update
 
           cmake -S . -B _build -DBUILD_SHARED_LIBS=ON -DENABLE_PULL=OFF -DENABLE_PUSH=ON -DENABLE_COMPRESSION=OFF -DENABLE_TESTING=OFF -GNinja
-          cmake --build _build
+          cmake --build _build --parallel
 
           sudo cmake --install _build
         env:
@@ -49,11 +53,11 @@ jobs:
           CMAKE_BUILD_TYPE: ${{matrix.buildmode}}
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel
 
       - name: Tests
         working-directory: ${{github.workspace}}/build
-        run: ctest -j 2 -C ${{matrix.buildmode}} --output-on-failure --repeat until-pass:5
+        run: ctest -j -C ${{matrix.buildmode}} --output-on-failure --repeat until-pass:5
 
       - name: Sanity check main executable
         working-directory: ${{github.workspace}}/build

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.28)
 # cmake does not currently support version suffixes (for dev / rc releases for instance.)
 # Github actions will detect if version has 'tweak' value (3 '.' in version) 
 # in order to avoid pushing Docker image for versions in development.
-project(coincenter VERSION 3.26.0.0
+project(coincenter VERSION 3.27.0.0
   DESCRIPTION "A C++ library centralizing several crypto currencies exchanges REST API into a single all in one tool with a unified interface"
   LANGUAGES CXX)
 
@@ -25,24 +25,10 @@ if(CCACHE_PROGRAM)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
 endif()
 
-#
-# MAIN_PROJECT CHECK
-# determine if coincenter is built as a sub-project or if it is the main project
-#
-set(MAIN_PROJECT OFF)
-
-if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-  set(MAIN_PROJECT ON)
-endif()
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  find_program(CLANG_TIDY "clang-tidy")
-endif()
-
-option(CCT_ENABLE_TESTS "Build the unit tests" ${MAIN_PROJECT})
-option(CCT_BUILD_EXEC "Build an executable instead of a static library" ${MAIN_PROJECT})
+option(CCT_ENABLE_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
+option(CCT_BUILD_EXEC "Build an executable instead of a static library" ${PROJECT_IS_TOP_LEVEL})
 option(CCT_ENABLE_ASAN "Compile with AddressSanitizer" OFF)
-option(CCT_ENABLE_CLANG_TIDY "Compile with clang-tidy checks" OFF)
+option(CCT_ENABLE_CLANG_TIDY "Compile the coincenter targets (not the dependencies) with clang-tidy checks" OFF)
 option(CCT_ENABLE_PROTO "Compile with protobuf support (to export data)" ON)
 option(CCT_BUILD_PROMETHEUS_FROM_SRC "Fetch and build from prometheus-cpp sources" OFF)
 option(CCT_BUILD_SHARED "Build coincenter (and aeronet) libraries as shared instead of static (not supported on Windows)" OFF)
@@ -353,19 +339,14 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/AddUnitTest.cmake)
 # coincenter library factorization of target options
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/CoincenterUtils.cmake)
 
-if(MSVC)
-  # https://stackoverflow.com/questions/5004858/why-is-stdmin-failing-when-windows-h-is-included
-  add_compile_definitions(NOMINMAX)
-  add_compile_definitions(_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
-  add_compile_definitions(_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING)
-  add_compile_options(/Zc:preprocessor) # Needed by glaze
-else()
+# Project settings applied to the coincenter targets only, not to the dependencies added above:
+# see CoincenterSetProjectProperties in cmake/SetProjectProperties.cmake. The variables checked there are set here.
+if(NOT MSVC)
   if(CCT_ENABLE_ASAN)
-    if (NOT CCT_ASAN_OPTIONS)
+    # The address sanitizer alone is already activated for the dependencies (see above)
+    if(NOT CCT_ASAN_OPTIONS)
       set(CCT_ASAN_OPTIONS -fsanitize=address -fsanitize=undefined -fsanitize=float-divide-by-zero -fno-sanitize-recover)
     endif()
-    add_compile_options(${CCT_ASAN_OPTIONS})
-    add_link_options(${CCT_ASAN_OPTIONS})
 
     message(STATUS "Activate asan with options ${CCT_ASAN_OPTIONS}")
   endif()
@@ -374,8 +355,7 @@ else()
     find_program(CLANG_TIDY "clang-tidy")
 
     if(CLANG_TIDY)
-      message(STATUS "Activate clang-tidy")
-      set(CMAKE_CXX_CLANG_TIDY clang-tidy)
+      message(STATUS "Activate clang-tidy on the coincenter targets")
     else()
       message(FATAL_ERROR "clang-tidy executable cannot be found")
     endif()

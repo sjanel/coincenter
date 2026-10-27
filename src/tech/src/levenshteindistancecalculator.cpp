@@ -18,6 +18,7 @@ int LevenshteinDistanceCalculator::operator()(std::string_view word1, std::strin
     _minDistance.insert(_minDistance.end(), l1 - _minDistance.size(), 0);
   }
 
+  // NOLINTNEXTLINE(modernize-use-ranges) - std::ranges::iota requires libstdc++ 15
   std::iota(_minDistance.begin(), _minDistance.end(), 0);
 
   const auto l2 = word2.size() + static_cast<size_type>(1);

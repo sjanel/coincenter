@@ -12,6 +12,7 @@
 #include <string_view>
 #include <thread>
 
+#include "cct_vector.hpp"
 #include "market-timestamp-set.hpp"
 #include "market-timestamp.hpp"
 #include "monetaryamount.hpp"

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <amc/isdetected.hpp>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <ranges>

@@ -6,6 +6,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <string_view>

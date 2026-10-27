@@ -44,11 +44,11 @@ RUN cmake -DCMAKE_BUILD_TYPE=${BUILD_MODE} \
     -GNinja ..
 
 # Build
-RUN cmake --build .
+RUN cmake --build . --parallel
 
 # Launch tests if any
 RUN if [ "$BUILD_TEST" = "1" -o "$BUILD_TEST" = "ON" ]; then \
-    ctest -j 2 --output-on-failure --repeat until-pass:5; \
+    ctest -j --output-on-failure --repeat until-pass:5; \
     fi
 
 # Grasp all libraries required by executable and copy them to 'deps'

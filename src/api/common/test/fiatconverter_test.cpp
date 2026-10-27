@@ -50,10 +50,9 @@ class DummyThirdPartyReader : public Reader {
 };
 }  // namespace
 
-HttpClient::HttpClient([[maybe_unused]] BestURLPicker bestURLPicker,
-                       [[maybe_unused]] AbstractMetricGateway* pMetricGateway,
-                       [[maybe_unused]] const PermanentRequestOptions& permanentHttpRequestOptions,
-                       [[maybe_unused]] settings::RunMode runMode)
+// NOLINTNEXTLINE(performance-unnecessary-value-param) - signature imposed by the declaration in httpclient.hpp
+HttpClient::HttpClient(BestURLPicker /*bestURLPicker*/, AbstractMetricGateway* /*pMetricGateway*/,
+                       const PermanentRequestOptions& /*permanentRequestOptions*/, settings::RunMode /*runMode*/)
     : _bestURLPicker(kSomeFakeURL) {}
 
 HttpClient::HttpClient(HttpClient&& rhs) noexcept = default;

@@ -6,6 +6,7 @@
 #include <thread>
 #include <utility>
 
+#include "auto-trade-config.hpp"
 #include "auto-trade-options.hpp"
 #include "balanceoptions.hpp"
 #include "cct_exception.hpp"

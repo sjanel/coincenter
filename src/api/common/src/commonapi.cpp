@@ -4,6 +4,7 @@
 #include <mutex>
 #include <optional>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "cachedresult.hpp"
@@ -19,6 +20,7 @@
 #include "exchange-name-enum.hpp"
 #include "fiats-cache-schema.hpp"
 #include "file.hpp"
+#include "httpclient.hpp"
 #include "httprequestoptions.hpp"
 #include "httprequesttype.hpp"
 #include "monetaryamountbycurrencyset.hpp"
@@ -67,7 +69,7 @@ CommonAPI::CommonAPI(const CoincenterInfo& coincenterInfo, Duration fiatsUpdateF
 }
 
 CurrencyCodeSet CommonAPI::queryFiats() {
-  std::lock_guard<std::recursive_mutex> guard(_globalMutex);
+  std::scoped_lock guard(_globalMutex);
   return _fiatsCache.get();
 }
 
@@ -76,7 +78,7 @@ bool CommonAPI::queryIsCurrencyCodeFiat(CurrencyCode currencyCode) { return quer
 MonetaryAmountByCurrencySet CommonAPI::tryQueryWithdrawalFees(ExchangeNameEnum exchangeNameEnum) {
   MonetaryAmountByCurrencySet ret;
   {
-    std::lock_guard<std::recursive_mutex> guard(_globalMutex);
+    std::scoped_lock guard(_globalMutex);
     ret = _withdrawalFeesCrawler.get(exchangeNameEnum).first;
   }
 
@@ -91,7 +93,7 @@ MonetaryAmountByCurrencySet CommonAPI::tryQueryWithdrawalFees(ExchangeNameEnum e
 std::optional<MonetaryAmount> CommonAPI::tryQueryWithdrawalFee(ExchangeNameEnum exchangeNameEnum,
                                                                CurrencyCode currencyCode) {
   {
-    std::lock_guard<std::recursive_mutex> guard(_globalMutex);
+    std::scoped_lock guard(_globalMutex);
     const auto& withdrawalFees = _withdrawalFeesCrawler.get(exchangeNameEnum).first;
     auto it = withdrawalFees.find(currencyCode);
     if (it != withdrawalFees.end()) {

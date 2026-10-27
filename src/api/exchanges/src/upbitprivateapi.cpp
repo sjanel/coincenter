@@ -1,5 +1,7 @@
 #include "upbitprivateapi.hpp"
 
+#include <aeronet/jwt-algorithm.hpp>
+#include <aeronet/jwt-key.hpp>
 #include <aeronet/jwt.hpp>
 #include <algorithm>
 #include <cstdint>
