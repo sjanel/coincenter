@@ -13,13 +13,17 @@
 #include <ostream>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "cct_exception.hpp"
 #include "cct_log.hpp"
+#include "proto-constants.hpp"
+#include "proto-zstd-streams.hpp"
+#include "serialization-tools.hpp"
 
 namespace cct {
 
-/// Utility class that allows compressed data to be written to rolling files.
+/// Utility class that allows compressed data (gzip or zstd) to be written to rolling files.
 /// At default constructor, no file is opened. Client is expected to call 'open' with a new std::ostream prior to any
 /// write. Data is written with the following scheme:
 ///  - First a VarInt64 is written with the size (in bytes) of the object to be serialized.
@@ -33,6 +37,7 @@ class ProtobufMessagesCompressedWriter {
   using OstreamOutputStream = ::google::protobuf::io::OstreamOutputStream;
   using GzipOutputStream = ::google::protobuf::io::GzipOutputStream;
   using CodedOutputStream = ::google::protobuf::io::CodedOutputStream;
+  using CompressedOutputStream = std::variant<std::monostate, GzipOutputStream, ZstdOutputStream>;
 
  public:
   /// Initializes a new ProtobufMessagesCompressedWriter without any opened stream.
@@ -48,7 +53,9 @@ class ProtobufMessagesCompressedWriter {
 
   ~ProtobufMessagesCompressedWriter() { close(); }
 
-  void open(OStreamType&& newOs) {
+  /// Opens a new stream, in which data will be written compressed with given compression format.
+  /// If the stream is appended to an existing file, the compression should be the same as the one of this file.
+  void open(OStreamType&& newOs, ProtobufCompression compression = kDefaultProtobufCompression) {
     close();
 
     _os = std::move(newOs);
@@ -61,9 +68,13 @@ class ProtobufMessagesCompressedWriter {
       throw ex;
     }
 
-    GzipOutputStream* pGzos;
+    ::google::protobuf::io::ZeroCopyOutputStream* pCompressedOs;
     try {
-      pGzos = std::construct_at(getGzipOutputStreamPtr(), pOos);
+      if (compression == ProtobufCompression::kZstd) {
+        pCompressedOs = &_compressedOs.template emplace<ZstdOutputStream>(pOos);
+      } else {
+        pCompressedOs = &_compressedOs.template emplace<GzipOutputStream>(pOos);
+      }
     } catch (const std::exception& ex) {
       std::destroy_at(pOos);
       _os = OStreamType();
@@ -71,9 +82,9 @@ class ProtobufMessagesCompressedWriter {
     }
 
     try {
-      std::construct_at(getCodedOutputStreamPtr(), pGzos);
+      std::construct_at(getCodedOutputStreamPtr(), pCompressedOs);
     } catch (const std::exception& ex) {
-      std::destroy_at(pGzos);
+      _compressedOs.template emplace<std::monostate>();
       std::destroy_at(pOos);
       _os = OStreamType();
       throw ex;
@@ -110,19 +121,18 @@ class ProtobufMessagesCompressedWriter {
     if (_isFileOpened) {
       // reverse destroy streams to flush latest data. Recreate the streams after creation of new ofstream
       std::destroy_at(getCodedOutputStreamPtr());
-      std::destroy_at(getGzipOutputStreamPtr());
+      _compressedOs.template emplace<std::monostate>();
       std::destroy_at(getOstreamOutputStreamPtr());
       _isFileOpened = false;
     }
   }
 
   OstreamOutputStream* getOstreamOutputStreamPtr() { return reinterpret_cast<OstreamOutputStream*>(_oos); }
-  GzipOutputStream* getGzipOutputStreamPtr() { return reinterpret_cast<GzipOutputStream*>(_gzos); }
   CodedOutputStream* getCodedOutputStreamPtr() { return reinterpret_cast<CodedOutputStream*>(_cos); }
 
   OStreamType _os;
   alignas(OstreamOutputStream) std::byte _oos[sizeof(OstreamOutputStream)];
-  alignas(GzipOutputStream) std::byte _gzos[sizeof(GzipOutputStream)];
+  CompressedOutputStream _compressedOs;
   alignas(CodedOutputStream) std::byte _cos[sizeof(CodedOutputStream)];
   bool _isFileOpened = false;
 };
@@ -174,11 +184,13 @@ class ProtobufMessageReaderIterator {
 };
 
 /// The compressed reader iterator that should be used in case files have been written with a
-/// ProtobufMessagesCompressedWriter.
+/// ProtobufMessagesCompressedWriter. The compression format (gzip or zstd) is detected automatically.
 class ProtobufMessageCompressedReaderIterator {
  public:
   explicit ProtobufMessageCompressedReaderIterator(std::istream& is)
-      : _iis(&is), _gzipIs(&_iis), _protobufMessageReaderBase(&_gzipIs) {}
+      : _iis(&is),
+        _compressedIs(MakeCompressedInputStream(DetectProtobufCompression(is), &_iis)),
+        _protobufMessageReaderBase(std::visit(ToZeroCopyInputStream, _compressedIs)) {}
 
   /// Tells whether this reader has at least one more message to be read.
   bool hasNext() { return _protobufMessageReaderBase.hasNext(); }
@@ -191,8 +203,23 @@ class ProtobufMessageCompressedReaderIterator {
   }
 
  private:
+  using CompressedInputStream = std::variant<::google::protobuf::io::GzipInputStream, ZstdInputStream>;
+
+  static CompressedInputStream MakeCompressedInputStream(ProtobufCompression compression,
+                                                         ::google::protobuf::io::ZeroCopyInputStream* pIs) {
+    if (compression == ProtobufCompression::kZstd) {
+      return CompressedInputStream(std::in_place_type<ZstdInputStream>, pIs);
+    }
+    return CompressedInputStream(std::in_place_type<::google::protobuf::io::GzipInputStream>, pIs);
+  }
+
+  static ::google::protobuf::io::ZeroCopyInputStream* ToZeroCopyInputStream(
+      ::google::protobuf::io::ZeroCopyInputStream& is) {
+    return &is;
+  }
+
   ::google::protobuf::io::IstreamInputStream _iis;
-  ::google::protobuf::io::GzipInputStream _gzipIs;
+  CompressedInputStream _compressedIs;
   ProtobufMessageReaderBase _protobufMessageReaderBase;
 };
 

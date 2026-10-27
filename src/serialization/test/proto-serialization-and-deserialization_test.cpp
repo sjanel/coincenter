@@ -15,6 +15,7 @@
 #include "market-timestamp-set.hpp"
 #include "market-timestamp.hpp"
 #include "monetaryamount.hpp"
+#include "proto-constants.hpp"
 #include "proto-deserializer.hpp"
 #include "proto-public-trade-compare.hpp"
 #include "proto-public-trade-converter.hpp"
@@ -152,6 +153,75 @@ TEST_F(ProtobufSerializerDeserializerTest, SerializeThenDeserializeSomeObjects) 
   EXPECT_EQ(deserializer.loadMarket(mk7, timeWindow79), vector<PublicTrade>({pt7}));
   EXPECT_TRUE(deserializer.loadMarket(Market{"UNK", "OTH"}, timeWindowAll).empty());
   EXPECT_EQ(deserializer.loadMarket(mk5, timeWindowAll), vector<PublicTrade>({pt10, pt11}));
+}
+
+TEST_F(ProtobufSerializerDeserializerTest, DefaultCompressionIsZstd) {
+  {
+    auto serializer = createSerializer();
+    serializer.push(mk1, td1);
+  }
+
+  const auto path = subPath1 / std::string_view{mk1.str()} / "1999" / "03" / "25" / ComputeProtoFileName(4);
+
+  ASSERT_TRUE(std::filesystem::exists(path));
+  EXPECT_EQ(DetectProtobufFileCompression(path, ProtobufCompression::kGzip), ProtobufCompression::kZstd);
+  EXPECT_EQ(createDeserializer().loadMarket(mk1, timeWindowAll), vector<PublicTrade>({pt1}));
+}
+
+TEST_F(ProtobufSerializerDeserializerTest, ReadFilesWrittenWithGzipAndZstd) {
+  {
+    Serializer gzipSerializer{subPath1, MarketTimestampSet{}, nbTradesPerMarketInMemory, ProtobufCompression::kGzip};
+    gzipSerializer.push(mk1, td1);
+    gzipSerializer.push(mk3, td4);
+  }
+  {
+    Serializer zstdSerializer{subPath1, MarketTimestampSet{}, nbTradesPerMarketInMemory, ProtobufCompression::kZstd};
+    zstdSerializer.push(mk1, td2);
+    zstdSerializer.push(mk4, td5);
+  }
+
+  const auto fileOf = [this](Market market, std::string_view year, std::string_view month, std::string_view day,
+                             int hour) {
+    return subPath1 / std::string_view{market.str()} / year / month / day / ComputeProtoFileName(hour);
+  };
+
+  EXPECT_EQ(DetectProtobufFileCompression(fileOf(mk1, "1999", "03", "25", 4), ProtobufCompression::kZstd),
+            ProtobufCompression::kGzip);
+  EXPECT_EQ(DetectProtobufFileCompression(fileOf(mk1, "2002", "06", "23", 7), ProtobufCompression::kGzip),
+            ProtobufCompression::kZstd);
+
+  auto deserializer = createDeserializer();
+
+  // a market with files in both formats is fully loaded
+  EXPECT_EQ(deserializer.loadMarket(mk1, timeWindowAll), vector<PublicTrade>({pt1, pt2}));
+  EXPECT_EQ(deserializer.loadMarket(mk3, timeWindowAll), vector<PublicTrade>({pt4}));
+  EXPECT_EQ(deserializer.loadMarket(mk4, timeWindowAll), vector<PublicTrade>({pt5}));
+}
+
+TEST_F(ProtobufSerializerDeserializerTest, AppendToExistingFileKeepsItsCompression) {
+  const PublicTrade nextPt{TradeSide::buy, MonetaryAmount{"0.13", mk1.base()}, MonetaryAmount{"1500.5", mk1.quote()},
+                           pt1.time() + milliseconds{1}};
+
+  for (ProtobufCompression firstCompression : {ProtobufCompression::kGzip, ProtobufCompression::kZstd}) {
+    const ProtobufCompression otherCompression =
+        firstCompression == ProtobufCompression::kGzip ? ProtobufCompression::kZstd : ProtobufCompression::kGzip;
+
+    std::filesystem::remove_all(subPath1);
+    {
+      Serializer serializer{subPath1, MarketTimestampSet{}, nbTradesPerMarketInMemory, firstCompression};
+      serializer.push(mk1, td1);
+    }
+    {
+      // Simulates a restart with another configured compression: the existing file is appended in its own format.
+      Serializer serializer{subPath1, MarketTimestampSet{}, nbTradesPerMarketInMemory, otherCompression};
+      serializer.push(mk1, ConvertPublicTradeToProto(nextPt));
+    }
+
+    const auto path = subPath1 / std::string_view{mk1.str()} / "1999" / "03" / "25" / ComputeProtoFileName(4);
+
+    EXPECT_EQ(DetectProtobufFileCompression(path, otherCompression), firstCompression);
+    EXPECT_EQ(createDeserializer().loadMarket(mk1, timeWindowAll), vector<PublicTrade>({pt1, nextPt}));
+  }
 }
 
 TEST_F(ProtobufSerializerDeserializerTest, ManySerializationsDifferentHoursOfDay) {

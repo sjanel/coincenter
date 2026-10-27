@@ -68,7 +68,8 @@ In addition, the basic minimum requirements are:
 
 The aeronet HTTP client decompresses responses with `zlib-ng`, `zstd` and `brotli`. These are fetched and
 built from source automatically by aeronet (they do not need to be installed system-wide), so only `zlib`
-(for protobuf) and `openssl` remain as system dependencies.
+(for protobuf) and `openssl` remain as system dependencies. The same `zstd` library is also used to compress the
+serialized protobuf market data (gzip files remain readable).
 
 ### Linux
 
